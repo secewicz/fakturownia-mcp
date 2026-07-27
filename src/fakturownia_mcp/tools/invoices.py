@@ -47,10 +47,22 @@ def register(mcp: FastMCP) -> None:
         client_id: Annotated[int | None, Field(description="Filter by client id")] = None,
         number: Annotated[int | str | None, Field(description="Filter by invoice number")] = None,
         kind: KindStr | None = None,
+        income: Annotated[
+            bool | None,
+            Field(
+                description=(
+                    "True/omitted = sales (income) invoices; False = cost/expense "
+                    "invoices (faktury kosztowe)"
+                )
+            ),
+        ] = None,
         page: Page = 1,
         per_page: PerPage = 25,
     ) -> dict[str, Any]:
-        """List/search invoices. Returns summaries; use get_invoice for full details."""
+        """List/search invoices (sales by default, costs with income=False).
+
+        Returns summaries; use get_invoice for full details.
+        """
         invoices = await config.get_client().list_invoices(
             period=period,
             date_from=date_from,
@@ -58,6 +70,7 @@ def register(mcp: FastMCP) -> None:
             client_id=client_id,
             number=str(number) if number is not None else None,
             kind=kind,
+            income=income,
             page=page,
             per_page=per_page,
         )
