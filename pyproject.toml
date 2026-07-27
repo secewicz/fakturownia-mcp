@@ -1,0 +1,76 @@
+[project]
+name = "fakturownia-mcp"
+version = "0.1.0"
+description = "MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Krzysztof Marmol", email = "krzysztof.marmol@gmail.com" },
+]
+license = { text = "MIT" }
+keywords = ["fakturownia", "invoiceocean", "mcp", "model-context-protocol", "claude"]
+dependencies = [
+    "mcp[cli]>=1.9,<2.0",
+    "fakturownia-client>=0.1.0",
+]
+
+[project.urls]
+Repository = "https://github.com/KrzysztofMarmol/fakturownia-mcp"
+
+[project.scripts]
+fakturownia-mcp = "fakturownia_mcp.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5.0",
+    "mypy>=1.10",
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+# Co-developed sibling checkout; switch to the git source below for CI or
+# machines without ../fakturownia-client:
+# fakturownia-client = { git = "https://github.com/KrzysztofMarmol/fakturownia-client" }
+fakturownia-client = { path = "../fakturownia-client", editable = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+check_untyped_defs = true
+no_implicit_optional = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
