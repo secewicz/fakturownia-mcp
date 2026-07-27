@@ -65,6 +65,32 @@ def tool_fn(name: str):  # noqa: ANN201 - test helper
     return mcp._tool_manager.get_tool(name).fn
 
 
+def elicitation_cb(action: str = "accept", confirm: bool = True):  # noqa: ANN201
+    """Build a client-side elicitation callback with a fixed answer."""
+    from mcp.types import ElicitResult
+
+    async def cb(context, params):  # noqa: ANN001, ANN202
+        if action == "accept":
+            return ElicitResult(action="accept", content={"confirm": confirm})
+        return ElicitResult(action=action)
+
+    return cb
+
+
+async def call_tool(name: str, args: dict, elicitation_callback=None):  # noqa: ANN001, ANN201
+    """Round-trip a tool call through an in-memory MCP session."""
+    from mcp.shared.memory import (
+        create_connected_server_and_client_session as client_session,
+    )
+
+    from fakturownia_mcp.server import mcp
+
+    async with client_session(
+        mcp._mcp_server, elicitation_callback=elicitation_callback
+    ) as session:
+        return await session.call_tool(name, args)
+
+
 def parse_result_text(result) -> object:  # noqa: ANN001 - mcp CallToolResult
     text = "".join(block.text for block in result.content if block.type == "text")
     return json.loads(text) if text else None

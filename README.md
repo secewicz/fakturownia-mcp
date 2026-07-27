@@ -12,6 +12,17 @@ calls don't block the server's event loop.
 There is deliberately **no invoice-delete tool** (destructive on financial records);
 use `change_invoice_status` instead.
 
+## Approval gate for writes
+
+Every mutating tool (`create_*`, `update_*`, `delete_client`,
+`change_invoice_status`) asks for confirmation via **MCP elicitation** before
+touching the API — clients with elicitation support (Claude Code, Claude
+Desktop, MCP Inspector) show a native approval dialog describing the exact
+operation. Declining aborts the call before any request is sent.
+
+For clients without elicitation support, or for trusted automation, set
+`FAKTUROWNIA_SKIP_CONFIRM=1` in the server env to disable the gate.
+
 ## Tools
 
 | Tool | Description |

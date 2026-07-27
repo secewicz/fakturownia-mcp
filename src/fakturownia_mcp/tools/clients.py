@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from fakturownia_client.models import Client
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 from fakturownia_mcp import config
+from fakturownia_mcp.approval import require_approval
 
 
 def _summary(client: Client) -> dict[str, Any]:
@@ -57,8 +58,11 @@ def register(mcp: FastMCP) -> None:
         post_code: str | None = None,
         country: str | None = None,
         company: bool = True,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
         """Create a client (contractor)."""
+        await require_approval(ctx, f"create client '{name}'")
         payload: dict[str, Any] = {
             "name": name,
             "tax_no": tax_no,
@@ -75,13 +79,26 @@ def register(mcp: FastMCP) -> None:
         return client.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    async def update_client(client_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_client(
+        client_id: int,
+        fields: dict[str, Any],
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
         """Update selected fields of a client, e.g. {"email": "x@y.pl"}."""
+        await require_approval(
+            ctx, f"update client {client_id}, fields: {', '.join(sorted(fields))}"
+        )
         client = await config.get_client().update_client(client_id, fields)
         return client.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    async def delete_client(client_id: int) -> dict[str, Any]:
+    async def delete_client(
+        client_id: int,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
         """Delete a client (contractor). Irreversible."""
+        await require_approval(ctx, f"DELETE client {client_id} (irreversible)")
         await config.get_client().delete_client(client_id)
         return {"deleted_client_id": client_id}

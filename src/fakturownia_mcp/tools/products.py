@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from fakturownia_client.models import Product
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 from fakturownia_mcp import config
+from fakturownia_mcp.approval import require_approval
 
 
 def _summary(product: Product) -> dict[str, Any]:
@@ -47,8 +48,11 @@ def register(mcp: FastMCP) -> None:
         tax: float | str = 23,
         code: str | None = None,
         currency: str | None = None,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
         """Create a product. Give price_net or price_gross; tax is the VAT rate (e.g. 23)."""
+        await require_approval(ctx, f"create product '{name}'")
         payload: dict[str, Any] = {
             "name": name,
             "price_net": price_net,
@@ -62,7 +66,15 @@ def register(mcp: FastMCP) -> None:
         return product.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    async def update_product(product_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_product(
+        product_id: int,
+        fields: dict[str, Any],
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
         """Update selected fields of a product, e.g. {"price_net": "99.0"}."""
+        await require_approval(
+            ctx, f"update product {product_id}, fields: {', '.join(sorted(fields))}"
+        )
         product = await config.get_client().update_product(product_id, fields)
         return product.model_dump(mode="json", exclude_none=True)

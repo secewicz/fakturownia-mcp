@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from fakturownia_client.models import Invoice
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 from fakturownia_mcp import config
+from fakturownia_mcp.approval import require_approval
 
 VALID_STATUSES = ("issued", "sent", "paid", "partial", "rejected")
 
@@ -78,6 +79,8 @@ def register(mcp: FastMCP) -> None:
         sell_date: str | None = None,
         payment_to: str | None = None,
         positions: list[dict[str, Any]] | None = None,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
         """Create an invoice. Identify the buyer by client_id or buyer_* fields.
 
@@ -85,6 +88,11 @@ def register(mcp: FastMCP) -> None:
         "total_price_gross": 123.00} (or price_net instead of total_price_gross).
         Dates are YYYY-MM-DD; issue_date defaults to today on the server side.
         """
+        buyer = buyer_name or (f"client_id={client_id}" if client_id else "unknown buyer")
+        names = ", ".join(str(p.get("name", "?")) for p in (positions or []))
+        await require_approval(
+            ctx, f"create {kind} invoice for {buyer} with positions: {names or '(none)'}"
+        )
         payload: dict[str, Any] = {
             "kind": kind,
             "buyer_name": buyer_name,
@@ -101,16 +109,30 @@ def register(mcp: FastMCP) -> None:
         return invoice.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    async def update_invoice(invoice_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_invoice(
+        invoice_id: int,
+        fields: dict[str, Any],
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
         """Update selected fields of an invoice, e.g. {"buyer_email": "x@y.pl"}."""
+        await require_approval(
+            ctx, f"update invoice {invoice_id}, fields: {', '.join(sorted(fields))}"
+        )
         invoice = await config.get_client().update_invoice(invoice_id, fields)
         return invoice.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    async def change_invoice_status(invoice_id: int, status: str) -> dict[str, Any]:
+    async def change_invoice_status(
+        invoice_id: int,
+        status: str,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
         """Change invoice status: issued, sent, paid, partial or rejected."""
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status {status!r}; expected one of {VALID_STATUSES}")
+        await require_approval(ctx, f"change status of invoice {invoice_id} to '{status}'")
         await config.get_client().change_invoice_status(invoice_id, status)  # type: ignore[arg-type]
         return {"invoice_id": invoice_id, "status": status}
 
