@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
 from fakturownia_client.models import Product
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from fakturownia_mcp import config
 from fakturownia_mcp.approval import require_approval
+from fakturownia_mcp.schemas import Page, PerPage, TaxRate, UpdateFields
+
+Price = Annotated[float | str | None, Field(description="Amount, e.g. 99.99 or '99.99'")]
 
 
 def _summary(product: Product) -> dict[str, Any]:
@@ -25,7 +29,7 @@ def _summary(product: Product) -> dict[str, Any]:
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
-    async def list_products(page: int = 1, per_page: int = 25) -> dict[str, Any]:
+    async def list_products(page: Page = 1, per_page: PerPage = 25) -> dict[str, Any]:
         """List products. Returns summaries; use get_product for details."""
         products = await config.get_client().list_products(page=page, per_page=per_page)
         return {
@@ -42,12 +46,12 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def create_product(
-        name: str,
-        price_net: float | str | None = None,
-        price_gross: float | str | None = None,
-        tax: float | str = 23,
-        code: str | None = None,
-        currency: str | None = None,
+        name: Annotated[str, Field(min_length=1, description="Product name")],
+        price_net: Price = None,
+        price_gross: Price = None,
+        tax: TaxRate = 23,
+        code: Annotated[str | None, Field(description="Product code/SKU")] = None,
+        currency: Annotated[str | None, Field(description="Currency code, e.g. PLN")] = None,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -68,11 +72,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def update_product(
         product_id: int,
-        fields: dict[str, Any],
+        fields: UpdateFields,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
-        """Update selected fields of a product, e.g. {"price_net": "99.0"}."""
+        """Update selected fields of a product. Note: changing the price requires
+        sending price_net and price_gross together — the API ignores a lone price_net."""
         await require_approval(
             ctx, f"update product {product_id}, fields: {', '.join(sorted(fields))}"
         )

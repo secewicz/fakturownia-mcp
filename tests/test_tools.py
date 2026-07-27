@@ -96,16 +96,46 @@ async def test_skip_env_bypasses_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.structuredContent == {"deleted_client_id": 5}
 
 
-async def test_change_invoice_status_rejects_unknown_status() -> None:
+async def test_change_invoice_status_rejects_unknown_status_via_schema() -> None:
     result = await call_tool(
         "change_invoice_status",
         {"invoice_id": 1, "status": "destroyed"},
         elicitation_callback=APPROVE,
     )
 
+    assert result.isError  # rejected by the Literal enum in the tool schema
+
+
+async def test_per_page_above_100_rejected_by_schema() -> None:
+    result = await call_tool("list_invoices", {"per_page": 500})
+
     assert result.isError
-    text = "".join(b.text for b in result.content if b.type == "text")
-    assert "Invalid status" in text
+
+
+async def test_bad_date_format_rejected_by_schema() -> None:
+    result = await call_tool("list_invoices", {"date_from": "27-07-2026"})
+
+    assert result.isError
+
+
+async def test_position_with_zero_quantity_rejected_by_schema() -> None:
+    result = await call_tool(
+        "create_invoice",
+        {"buyer_name": "ACME", "positions": [{"name": "Usługa", "quantity": 0}]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+
+
+async def test_empty_update_fields_rejected_by_schema() -> None:
+    result = await call_tool(
+        "update_invoice",
+        {"invoice_id": 1, "fields": {}},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
 
 
 async def test_write_roundtrip_all_tools_approved() -> None:

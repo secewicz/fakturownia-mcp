@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
 from fakturownia_client.models import Client
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from fakturownia_mcp import config
 from fakturownia_mcp.approval import require_approval
+from fakturownia_mcp.schemas import Page, PerPage, UpdateFields
+
+TaxNo = Annotated[str, Field(description="Tax id (NIP), digits only, e.g. 1234567890")]
 
 
 def _summary(client: Client) -> dict[str, Any]:
@@ -25,11 +29,11 @@ def _summary(client: Client) -> dict[str, Any]:
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def list_clients(
-        name: str | None = None,
-        tax_no: str | None = None,
-        email: str | None = None,
-        page: int = 1,
-        per_page: int = 25,
+        name: Annotated[str | None, Field(description="Filter by (partial) name")] = None,
+        tax_no: TaxNo | None = None,
+        email: Annotated[str | None, Field(description="Filter by e-mail")] = None,
+        page: Page = 1,
+        per_page: PerPage = 25,
     ) -> dict[str, Any]:
         """List/search clients (contractors). Returns summaries; use get_client for details."""
         clients = await config.get_client().list_clients(
@@ -49,15 +53,17 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def create_client(
-        name: str,
-        tax_no: str | None = None,
-        email: str | None = None,
-        phone: str | None = None,
-        street: str | None = None,
-        city: str | None = None,
-        post_code: str | None = None,
-        country: str | None = None,
-        company: bool = True,
+        name: Annotated[str, Field(min_length=1, description="Client name")],
+        tax_no: TaxNo | None = None,
+        email: Annotated[str | None, Field(description="E-mail address")] = None,
+        phone: Annotated[str | None, Field(description="Phone number")] = None,
+        street: Annotated[str | None, Field(description="Street and building number")] = None,
+        city: Annotated[str | None, Field(description="City")] = None,
+        post_code: Annotated[str | None, Field(description="Postal code, e.g. 30-001")] = None,
+        country: Annotated[str | None, Field(description="Country code, e.g. PL")] = None,
+        company: Annotated[
+            bool, Field(description="True for a company, False for a person")
+        ] = True,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -81,7 +87,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def update_client(
         client_id: int,
-        fields: dict[str, Any],
+        fields: UpdateFields,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:

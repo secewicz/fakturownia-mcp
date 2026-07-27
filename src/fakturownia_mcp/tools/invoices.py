@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fakturownia_client.models import Invoice
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from fakturownia_mcp import config
 from fakturownia_mcp.approval import require_approval
-
-VALID_STATUSES = ("issued", "sent", "paid", "partial", "rejected")
+from fakturownia_mcp.schemas import (
+    DateStr,
+    InvoiceStatus,
+    KindStr,
+    Page,
+    PeriodStr,
+    PerPage,
+    PositionInput,
+    UpdateFields,
+)
 
 
 def _summary(invoice: Invoice) -> dict[str, Any]:
@@ -32,26 +41,22 @@ def _summary(invoice: Invoice) -> dict[str, Any]:
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def list_invoices(
-        period: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        client_id: int | None = None,
-        number: str | None = None,
-        kind: str | None = None,
-        page: int = 1,
-        per_page: int = 25,
+        period: PeriodStr | None = None,
+        date_from: DateStr | None = None,
+        date_to: DateStr | None = None,
+        client_id: Annotated[int | None, Field(description="Filter by client id")] = None,
+        number: Annotated[int | str | None, Field(description="Filter by invoice number")] = None,
+        kind: KindStr | None = None,
+        page: Page = 1,
+        per_page: PerPage = 25,
     ) -> dict[str, Any]:
-        """List/search invoices. Returns summaries; use get_invoice for full details.
-
-        period: this_month, last_month, this_year, last_30_days, all... Giving
-        date_from/date_to (YYYY-MM-DD) automatically switches to a date range.
-        """
+        """List/search invoices. Returns summaries; use get_invoice for full details."""
         invoices = await config.get_client().list_invoices(
             period=period,
             date_from=date_from,
             date_to=date_to,
             client_id=client_id,
-            number=number,
+            number=str(number) if number is not None else None,
             kind=kind,
             page=page,
             per_page=per_page,
@@ -70,26 +75,30 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def create_invoice(
-        buyer_name: str | None = None,
-        buyer_tax_no: str | None = None,
-        buyer_email: str | None = None,
-        client_id: int | None = None,
-        kind: str = "vat",
-        issue_date: str | None = None,
-        sell_date: str | None = None,
-        payment_to: str | None = None,
-        positions: list[dict[str, Any]] | None = None,
+        buyer_name: Annotated[
+            str | None, Field(description="Buyer name (or pass client_id instead)")
+        ] = None,
+        buyer_tax_no: Annotated[str | None, Field(description="Buyer tax id (NIP)")] = None,
+        buyer_email: Annotated[str | None, Field(description="Buyer e-mail")] = None,
+        client_id: Annotated[
+            int | None, Field(description="Existing client id to bill (fills buyer data)")
+        ] = None,
+        kind: KindStr = "vat",
+        issue_date: DateStr | None = None,
+        sell_date: DateStr | None = None,
+        payment_to: DateStr | None = None,
+        positions: Annotated[
+            list[PositionInput] | None, Field(description="Invoice line items")
+        ] = None,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
         """Create an invoice. Identify the buyer by client_id or buyer_* fields.
 
-        Each position is a dict like {"name": "...", "quantity": 1, "tax": 23,
-        "total_price_gross": 123.00} (or price_net instead of total_price_gross).
-        Dates are YYYY-MM-DD; issue_date defaults to today on the server side.
+        issue_date defaults to today on the server side.
         """
         buyer = buyer_name or (f"client_id={client_id}" if client_id else "unknown buyer")
-        names = ", ".join(str(p.get("name", "?")) for p in (positions or []))
+        names = ", ".join(p.name for p in (positions or []))
         await require_approval(
             ctx, f"create {kind} invoice for {buyer} with positions: {names or '(none)'}"
         )
@@ -102,7 +111,7 @@ def register(mcp: FastMCP) -> None:
             "issue_date": issue_date,
             "sell_date": sell_date,
             "payment_to": payment_to,
-            "positions": positions or [],
+            "positions": [p.model_dump(exclude_none=True) for p in (positions or [])],
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         invoice = await config.get_client().create_invoice(payload)
@@ -111,7 +120,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def update_invoice(
         invoice_id: int,
-        fields: dict[str, Any],
+        fields: UpdateFields,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -125,22 +134,24 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def change_invoice_status(
         invoice_id: int,
-        status: str,
+        status: InvoiceStatus,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
         """Change invoice status: issued, sent, paid, partial or rejected."""
-        if status not in VALID_STATUSES:
-            raise ValueError(f"Invalid status {status!r}; expected one of {VALID_STATUSES}")
         await require_approval(ctx, f"change status of invoice {invoice_id} to '{status}'")
-        await config.get_client().change_invoice_status(invoice_id, status)  # type: ignore[arg-type]
+        await config.get_client().change_invoice_status(invoice_id, status)
         return {"invoice_id": invoice_id, "status": status}
 
     @mcp.tool()
     async def download_invoice_pdf(
-        invoice_id: int, output_path: str | None = None
+        invoice_id: int,
+        output_path: Annotated[
+            str | None,
+            Field(description="Target file path; defaults to ~/Downloads/faktura-<number>.pdf"),
+        ] = None,
     ) -> dict[str, Any]:
-        """Download the invoice PDF to disk (default: ~/Downloads/faktura-<number>.pdf)."""
+        """Download the invoice PDF to disk."""
         client = config.get_client()
         pdf = await client.download_invoice_pdf(invoice_id)
         if output_path:
