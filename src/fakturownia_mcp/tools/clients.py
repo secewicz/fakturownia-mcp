@@ -23,7 +23,7 @@ def _summary(client: Client) -> dict[str, Any]:
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
-    def list_clients(
+    async def list_clients(
         name: str | None = None,
         tax_no: str | None = None,
         email: str | None = None,
@@ -31,7 +31,7 @@ def register(mcp: FastMCP) -> None:
         per_page: int = 25,
     ) -> dict[str, Any]:
         """List/search clients (contractors). Returns summaries; use get_client for details."""
-        clients = config.get_client().list_clients(
+        clients = await config.get_client().list_clients(
             name=name, tax_no=tax_no, email=email, page=page, per_page=per_page
         )
         return {
@@ -41,13 +41,13 @@ def register(mcp: FastMCP) -> None:
         }
 
     @mcp.tool()
-    def get_client(client_id: int) -> dict[str, Any]:
+    async def get_client(client_id: int) -> dict[str, Any]:
         """Get full client details."""
-        client = config.get_client().get_client(client_id)
+        client = await config.get_client().get_client(client_id)
         return client.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def create_client(
+    async def create_client(
         name: str,
         tax_no: str | None = None,
         email: str | None = None,
@@ -71,17 +71,17 @@ def register(mcp: FastMCP) -> None:
             "company": company,
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        client = config.get_client().create_client(payload)
+        client = await config.get_client().create_client(payload)
         return client.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def update_client(client_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_client(client_id: int, fields: dict[str, Any]) -> dict[str, Any]:
         """Update selected fields of a client, e.g. {"email": "x@y.pl"}."""
-        client = config.get_client().update_client(client_id, fields)
+        client = await config.get_client().update_client(client_id, fields)
         return client.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def delete_client(client_id: int) -> dict[str, Any]:
+    async def delete_client(client_id: int) -> dict[str, Any]:
         """Delete a client (contractor). Irreversible."""
-        config.get_client().delete_client(client_id)
+        await config.get_client().delete_client(client_id)
         return {"deleted_client_id": client_id}

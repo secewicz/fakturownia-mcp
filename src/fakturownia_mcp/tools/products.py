@@ -24,9 +24,9 @@ def _summary(product: Product) -> dict[str, Any]:
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
-    def list_products(page: int = 1, per_page: int = 25) -> dict[str, Any]:
+    async def list_products(page: int = 1, per_page: int = 25) -> dict[str, Any]:
         """List products. Returns summaries; use get_product for details."""
-        products = config.get_client().list_products(page=page, per_page=per_page)
+        products = await config.get_client().list_products(page=page, per_page=per_page)
         return {
             "products": [_summary(p) for p in products],
             "page": page,
@@ -34,13 +34,13 @@ def register(mcp: FastMCP) -> None:
         }
 
     @mcp.tool()
-    def get_product(product_id: int) -> dict[str, Any]:
+    async def get_product(product_id: int) -> dict[str, Any]:
         """Get full product details."""
-        product = config.get_client().get_product(product_id)
+        product = await config.get_client().get_product(product_id)
         return product.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def create_product(
+    async def create_product(
         name: str,
         price_net: float | str | None = None,
         price_gross: float | str | None = None,
@@ -58,11 +58,11 @@ def register(mcp: FastMCP) -> None:
             "currency": currency,
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        product = config.get_client().create_product(payload)
+        product = await config.get_client().create_product(payload)
         return product.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def update_product(product_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_product(product_id: int, fields: dict[str, Any]) -> dict[str, Any]:
         """Update selected fields of a product, e.g. {"price_net": "99.0"}."""
-        product = config.get_client().update_product(product_id, fields)
+        product = await config.get_client().update_product(product_id, fields)
         return product.model_dump(mode="json", exclude_none=True)

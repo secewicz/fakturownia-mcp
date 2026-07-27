@@ -30,7 +30,7 @@ def _summary(invoice: Invoice) -> dict[str, Any]:
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
-    def list_invoices(
+    async def list_invoices(
         period: str | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
@@ -45,7 +45,7 @@ def register(mcp: FastMCP) -> None:
         period: this_month, last_month, this_year, last_30_days, all... Giving
         date_from/date_to (YYYY-MM-DD) automatically switches to a date range.
         """
-        invoices = config.get_client().list_invoices(
+        invoices = await config.get_client().list_invoices(
             period=period,
             date_from=date_from,
             date_to=date_to,
@@ -62,13 +62,13 @@ def register(mcp: FastMCP) -> None:
         }
 
     @mcp.tool()
-    def get_invoice(invoice_id: int) -> dict[str, Any]:
+    async def get_invoice(invoice_id: int) -> dict[str, Any]:
         """Get full invoice details including positions (line items)."""
-        invoice = config.get_client().get_invoice(invoice_id)
+        invoice = await config.get_client().get_invoice(invoice_id)
         return invoice.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def create_invoice(
+    async def create_invoice(
         buyer_name: str | None = None,
         buyer_tax_no: str | None = None,
         buyer_email: str | None = None,
@@ -97,32 +97,34 @@ def register(mcp: FastMCP) -> None:
             "positions": positions or [],
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        invoice = config.get_client().create_invoice(payload)
+        invoice = await config.get_client().create_invoice(payload)
         return invoice.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def update_invoice(invoice_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    async def update_invoice(invoice_id: int, fields: dict[str, Any]) -> dict[str, Any]:
         """Update selected fields of an invoice, e.g. {"buyer_email": "x@y.pl"}."""
-        invoice = config.get_client().update_invoice(invoice_id, fields)
+        invoice = await config.get_client().update_invoice(invoice_id, fields)
         return invoice.model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def change_invoice_status(invoice_id: int, status: str) -> dict[str, Any]:
+    async def change_invoice_status(invoice_id: int, status: str) -> dict[str, Any]:
         """Change invoice status: issued, sent, paid, partial or rejected."""
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status {status!r}; expected one of {VALID_STATUSES}")
-        config.get_client().change_invoice_status(invoice_id, status)  # type: ignore[arg-type]
+        await config.get_client().change_invoice_status(invoice_id, status)  # type: ignore[arg-type]
         return {"invoice_id": invoice_id, "status": status}
 
     @mcp.tool()
-    def download_invoice_pdf(invoice_id: int, output_path: str | None = None) -> dict[str, Any]:
+    async def download_invoice_pdf(
+        invoice_id: int, output_path: str | None = None
+    ) -> dict[str, Any]:
         """Download the invoice PDF to disk (default: ~/Downloads/faktura-<number>.pdf)."""
         client = config.get_client()
-        pdf = client.download_invoice_pdf(invoice_id)
+        pdf = await client.download_invoice_pdf(invoice_id)
         if output_path:
             target = Path(output_path).expanduser()
         else:
-            number = client.get_invoice(invoice_id).number or str(invoice_id)
+            number = (await client.get_invoice(invoice_id)).number or str(invoice_id)
             target = Path.home() / "Downloads" / f"faktura-{number.replace('/', '-')}.pdf"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(pdf)

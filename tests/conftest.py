@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 import httpx
 import pytest
-from fakturownia_client import FakturowniaClient
+from fakturownia_client import AsyncFakturowniaClient
 
 from fakturownia_mcp import config
 
@@ -49,8 +49,10 @@ def _handler(request: httpx.Request) -> httpx.Response:
 
 
 @pytest.fixture(autouse=True)
-def fake_client() -> Iterator[FakturowniaClient]:
-    client = FakturowniaClient("testfirma", "secret-token", transport=httpx.MockTransport(_handler))
+def fake_client() -> Iterator[AsyncFakturowniaClient]:
+    client = AsyncFakturowniaClient(
+        "testfirma", "secret-token", transport=httpx.MockTransport(_handler)
+    )
     config.set_client(client)
     yield client
     config.set_client(None)

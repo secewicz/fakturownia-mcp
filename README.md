@@ -6,6 +6,8 @@ status changes, PDF download), clients and products.
 
 Built on [`fakturownia-client`](https://github.com/KrzysztofMarmol/fakturownia-client) —
 the API token is sent only in the `Authorization: Bearer` header, never in URLs.
+All tools are `async` (backed by `AsyncFakturowniaClient`), so concurrent tool
+calls don't block the server's event loop.
 
 There is deliberately **no invoice-delete tool** (destructive on financial records);
 use `change_invoice_status` instead.
