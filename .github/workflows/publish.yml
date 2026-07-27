@@ -1,0 +1,40 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # sibling checkout: [tool.uv.sources] points at ../fakturownia-client
+      - uses: actions/checkout@v4
+        with:
+          path: fakturownia-mcp
+      - uses: actions/checkout@v4
+        with:
+          repository: KrzysztofMarmol/fakturownia-client
+          path: fakturownia-client
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+        working-directory: fakturownia-mcp
+      - run: uv run ruff check .
+        working-directory: fakturownia-mcp
+      - run: uv run ruff format --check .
+        working-directory: fakturownia-mcp
+      - run: uv run mypy
+        working-directory: fakturownia-mcp
+      - run: uv run pytest
+        working-directory: fakturownia-mcp
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

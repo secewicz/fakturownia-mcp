@@ -1,6 +1,6 @@
 [project]
 name = "fakturownia-mcp"
-version = "0.1.0"
+version = "0.0.1"
 description = "MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,7 +11,7 @@ license = { text = "MIT" }
 keywords = ["fakturownia", "invoiceocean", "mcp", "model-context-protocol", "claude"]
 dependencies = [
     "mcp[cli]>=1.9,<2.0",
-    "fakturownia-client>=0.1.0",
+    "fakturownia-client>=0.0.1",
 ]
 
 [project.urls]

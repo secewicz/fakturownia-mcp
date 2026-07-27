@@ -38,8 +38,13 @@ For clients without elicitation support, or for trusted automation, set
 
 ## Setup
 
-Requires a sibling checkout of `fakturownia-client` (editable path dependency —
-see `[tool.uv.sources]` in `pyproject.toml` for the git alternative):
+Once published to PyPI, no checkout is needed — `uvx fakturownia-mcp` runs the
+server directly (use `"command": "uvx", "args": ["fakturownia-mcp"]` in client
+configs below instead of the `uv run --directory ...` form).
+
+For development, a sibling checkout of `fakturownia-client` is required
+(editable path dependency — see `[tool.uv.sources]` in `pyproject.toml` for the
+git alternative):
 
 ```bash
 git clone https://github.com/KrzysztofMarmol/fakturownia-client
