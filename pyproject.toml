@@ -1,31 +1,38 @@
 [project]
 name = "fakturownia-mcp"
-version = "0.0.2"
+dynamic = ["version"]
 description = "MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
     { name = "Krzysztof Marmol", email = "krzysztof.marmol@gmail.com" },
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["fakturownia", "invoiceocean", "mcp", "model-context-protocol", "claude"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial :: Accounting",
+    "Typing :: Typed",
 ]
 dependencies = [
-    "mcp[cli]>=1.9,<2.0",
-    "fakturownia-client>=0.0.1",
+    "mcp>=1.9,<2.0",
+    "fakturownia-client>=0.1.0",
 ]
 
 [project.urls]
 Repository = "https://github.com/KrzysztofMarmol/fakturownia-mcp"
+Issues = "https://github.com/KrzysztofMarmol/fakturownia-mcp/issues"
+Changelog = "https://github.com/KrzysztofMarmol/fakturownia-mcp/blob/main/CHANGELOG.md"
 
 [project.scripts]
 fakturownia-mcp = "fakturownia_mcp.server:main"
@@ -36,14 +43,21 @@ dev = [
     "mypy>=1.10",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
 ]
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+fakturownia_mcp = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "fakturownia_mcp.__version__" }
 
 [tool.uv.sources]
 # Co-developed sibling checkout; switch to the git source below for CI or

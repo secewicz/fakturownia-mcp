@@ -43,11 +43,47 @@ TaxRate = Annotated[
     Field(description="VAT rate, e.g. 23, 8, 0, or 'zw' (exempt) / 'np' (not applicable)"),
 ]
 
-UpdateFields = Annotated[
+InvoiceNumber = Annotated[
+    str,
+    Field(description="Full or partial invoice number as printed, e.g. '15/2025' or 'P1/07/2026'"),
+]
+
+InvoiceUpdateFields = Annotated[
     dict[str, Any],
     Field(
         min_length=1,
-        description='Partial update: only the fields to change, e.g. {"buyer_email": "x@y.pl"}',
+        description=(
+            "Only the fields to change, using Fakturownia API names. Common ones: "
+            "buyer_name, buyer_tax_no, buyer_email, issue_date, sell_date, payment_to, "
+            "description, payment_type, approval_status. Do NOT change 'status' here — "
+            "use change_invoice_status. Updating 'positions' has special semantics "
+            "(existing lines need their 'id'; removal needs {'id': ..., '_destroy': 1})."
+        ),
+    ),
+]
+
+ClientUpdateFields = Annotated[
+    dict[str, Any],
+    Field(
+        min_length=1,
+        description=(
+            "Only the fields to change, using Fakturownia API names. Common ones: "
+            "name, tax_no, email, phone, street, city, post_code, country, note, "
+            "external_id, company."
+        ),
+    ),
+]
+
+ProductUpdateFields = Annotated[
+    dict[str, Any],
+    Field(
+        min_length=1,
+        description=(
+            "Only the fields to change, using Fakturownia API names. Common ones: "
+            "name, code, price_net, price_gross, tax, currency, quantity_unit, "
+            "description, disabled. Caveat: to change the price you MUST send "
+            "price_net and price_gross together — a lone price_net is ignored."
+        ),
     ),
 ]
 
@@ -67,3 +103,14 @@ class PositionInput(BaseModel):
     product_id: Annotated[
         int | None, Field(description="Existing product id to link this line to")
     ] = None
+
+
+_SECRET_FIELDS = ("token", "view_url", "panel_url", "payment_url")
+
+
+def full_record(model: BaseModel) -> dict[str, Any]:
+    """Full JSON dump minus secret-bearing fields (public share links, tokens)."""
+    data = model.model_dump(mode="json", exclude_none=True)
+    for key in _SECRET_FIELDS:
+        data.pop(key, None)
+    return data

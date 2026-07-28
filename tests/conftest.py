@@ -17,12 +17,24 @@ INVOICE = {
     "price_net": "100.0",
     "price_gross": "123.0",
     "currency": "PLN",
+    "token": "secret-share-token",
+    "view_url": "https://x.fakturownia.net/f/abc",
 }
-CLIENT = {"id": 5, "name": "ACME Sp. z o.o.", "tax_no": "1234567890", "email": "a@acme.pl"}
+CLIENT = {
+    "id": 5,
+    "name": "ACME Sp. z o.o.",
+    "tax_no": "1234567890",
+    "email": "a@acme.pl",
+    "token": "secret-client-token",
+    "panel_url": "https://x.fakturownia.pl/panel/abc",
+}
 PRODUCT = {"id": 9, "name": "Abonament", "price_net": "89.0", "tax": "23"}
+
+RECORDED: list[httpx.Request] = []
 
 
 def _handler(request: httpx.Request) -> httpx.Response:
+    RECORDED.append(request)
     path = request.url.path
     method = request.method
     routes = {
@@ -50,8 +62,9 @@ def _handler(request: httpx.Request) -> httpx.Response:
 
 @pytest.fixture(autouse=True)
 def fake_client() -> Iterator[AsyncFakturowniaClient]:
+    RECORDED.clear()
     client = AsyncFakturowniaClient(
-        "testfirma", "secret-token", transport=httpx.MockTransport(_handler)
+        "testfirma", "secret-token", max_retries=0, transport=httpx.MockTransport(_handler)
     )
     config.set_client(client)
     yield client
@@ -91,6 +104,15 @@ async def call_tool(name: str, args: dict, elicitation_callback=None):  # noqa: 
         return await session.call_tool(name, args)
 
 
-def parse_result_text(result) -> object:  # noqa: ANN001 - mcp CallToolResult
-    text = "".join(block.text for block in result.content if block.type == "text")
-    return json.loads(text) if text else None
+def result_text(result) -> str:  # noqa: ANN001
+    return "".join(block.text for block in result.content if block.type == "text")
+
+
+def last_request_params(path: str) -> dict:
+    """Query params of the most recent recorded request to the given path."""
+    for request in reversed(RECORDED):
+        if request.url.path == path:
+            return dict(request.url.params)
+    raise AssertionError(
+        f"no recorded request to {path}: {json.dumps([str(r.url) for r in RECORDED])}"
+    )

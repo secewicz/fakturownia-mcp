@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Development layout: sibling checkout of fakturownia-client (uv.lock path source)
+  test-dev:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: fakturownia-mcp
+      - uses: actions/checkout@v4
+        with:
+          repository: KrzysztofMarmol/fakturownia-client
+          path: fakturownia-client
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked --extra dev
+        working-directory: fakturownia-mcp
+      - run: uv run ruff check .
+        working-directory: fakturownia-mcp
+      - run: uv run ruff format --check .
+        working-directory: fakturownia-mcp
+      - run: uv run mypy
+        working-directory: fakturownia-mcp
+      - run: uv run pytest --cov=fakturownia_mcp --cov-report=term --cov-fail-under=85
+        working-directory: fakturownia-mcp
+
+  # Published pair: resolve fakturownia-client from PyPI, as end users will
+  test-published:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --no-sources --extra dev
+      - run: uv run pytest

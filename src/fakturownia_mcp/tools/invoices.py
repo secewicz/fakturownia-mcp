@@ -7,20 +7,27 @@ from typing import Annotated, Any
 
 from fakturownia_client.models import Invoice
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
+from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from fakturownia_mcp import config
-from fakturownia_mcp.approval import require_approval
+from fakturownia_mcp.approval import format_fields, require_approval
+from fakturownia_mcp.errors import api_call
 from fakturownia_mcp.schemas import (
     DateStr,
+    InvoiceNumber,
     InvoiceStatus,
+    InvoiceUpdateFields,
     KindStr,
     Page,
     PeriodStr,
     PerPage,
     PositionInput,
-    UpdateFields,
+    full_record,
 )
+
+_READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 
 
 def _summary(invoice: Invoice) -> dict[str, Any]:
@@ -39,13 +46,15 @@ def _summary(invoice: Invoice) -> dict[str, Any]:
 
 
 def register(mcp: FastMCP) -> None:
-    @mcp.tool()
+    @mcp.tool(annotations=_READ.model_copy(update={"title": "List invoices"}))
     async def list_invoices(
         period: PeriodStr | None = None,
         date_from: DateStr | None = None,
         date_to: DateStr | None = None,
-        client_id: Annotated[int | None, Field(description="Filter by client id")] = None,
-        number: Annotated[int | str | None, Field(description="Filter by invoice number")] = None,
+        client_id: Annotated[
+            int | None, Field(description="Filter by client id (from list_clients)")
+        ] = None,
+        number: InvoiceNumber | None = None,
         kind: KindStr | None = None,
         income: Annotated[
             bool | None,
@@ -59,20 +68,34 @@ def register(mcp: FastMCP) -> None:
         page: Page = 1,
         per_page: PerPage = 25,
     ) -> dict[str, Any]:
-        """List/search invoices (sales by default, costs with income=False).
+        """Search the account's invoices and return one summary per invoice.
 
-        Returns summaries; use get_invoice for full details.
+        Call this to find invoices by period, date range, client, number or kind,
+        and to obtain invoice ids for the other invoice tools. Sales invoices are
+        returned by default; pass income=False for cost/expense documents. When
+        searching by number or client_id across history, also pass period='all' —
+        without a date filter the API may limit results to a recent period.
+
+        Returns {"invoices": [summaries], "page", "has_more"}; each summary has id,
+        number, kind, status, issue_date, payment_to, buyer_name, price_net,
+        price_gross, currency. Summaries omit line items — call
+        get_invoice(invoice_id) for the full record. has_more is optimistic: a
+        result set exactly equal to per_page reports True even on the last page.
+        Example: list_invoices(period="last_month", income=False, per_page=50).
         """
-        invoices = await config.get_client().list_invoices(
-            period=period,
-            date_from=date_from,
-            date_to=date_to,
-            client_id=client_id,
-            number=str(number) if number is not None else None,
-            kind=kind,
-            income=income,
-            page=page,
-            per_page=per_page,
+        client = await config.get_client()
+        invoices = await api_call(
+            client.list_invoices(
+                period=period,
+                date_from=date_from,
+                date_to=date_to,
+                client_id=client_id,
+                number=number,
+                kind=kind,
+                income=income,
+                page=page,
+                per_page=per_page,
+            )
         )
         return {
             "invoices": [_summary(inv) for inv in invoices],
@@ -80,13 +103,31 @@ def register(mcp: FastMCP) -> None:
             "has_more": len(invoices) == per_page,
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ.model_copy(update={"title": "Get invoice"}))
     async def get_invoice(invoice_id: int) -> dict[str, Any]:
-        """Get full invoice details including positions (line items)."""
-        invoice = await config.get_client().get_invoice(invoice_id)
-        return invoice.model_dump(mode="json", exclude_none=True)
+        """Get the full record of one invoice, including positions (line items).
 
-    @mcp.tool()
+        Call this when you need details a list_invoices summary lacks: line items,
+        seller/buyer addresses, payment info or accounting fields. invoice_id is
+        the numeric id from list_invoices — not the printed invoice number.
+
+        Returns the complete invoice as stored in Fakturownia (can be large;
+        secret share-link fields are removed). Do not call it in a loop over many
+        invoices when the summaries already answer the question.
+        """
+        client = await config.get_client()
+        invoice = await api_call(client.get_invoice(invoice_id))
+        return full_record(invoice)
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Create invoice",
+            readOnlyHint=False,
+            destructiveHint=False,
+            idempotentHint=False,
+            openWorldHint=False,
+        )
+    )
     async def create_invoice(
         buyer_name: Annotated[
             str | None, Field(description="Buyer name (or pass client_id instead)")
@@ -106,14 +147,28 @@ def register(mcp: FastMCP) -> None:
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
-        """Create an invoice. Identify the buyer by client_id or buyer_* fields.
+        """Create a new invoice (default kind 'vat') in the account.
 
-        issue_date defaults to today on the server side.
+        The user approves via a confirmation dialog before anything is created;
+        if they decline, do not retry — ask them instead. Prefer billing an
+        existing contractor: find them with list_clients(tax_no=...) and pass
+        client_id, which fills the buyer data and avoids duplicate contractors;
+        use buyer_* fields only for one-off buyers. Each position needs a name
+        plus price_net or total_price_gross; issue_date defaults to today on the
+        server side. Do not use this to modify an existing invoice — that is
+        update_invoice / change_invoice_status.
+
+        Returns a summary of the created invoice: its id (for later tool calls)
+        and the assigned number. Example: create_invoice(client_id=123,
+        positions=[{"name": "Consulting", "quantity": 10, "price_net": 150, "tax": 23}]).
         """
         buyer = buyer_name or (f"client_id={client_id}" if client_id else "unknown buyer")
-        names = ", ".join(p.name for p in (positions or []))
+        described = ", ".join(
+            f"{p.quantity} x {p.name} ({p.total_price_gross or p.price_net})"
+            for p in (positions or [])
+        )
         await require_approval(
-            ctx, f"create {kind} invoice for {buyer} with positions: {names or '(none)'}"
+            ctx, f"create {kind} invoice for {buyer}; positions: {described or '(none)'}"
         )
         payload: dict[str, Any] = {
             "kind": kind,
@@ -127,51 +182,129 @@ def register(mcp: FastMCP) -> None:
             "positions": [p.model_dump(exclude_none=True) for p in (positions or [])],
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        invoice = await config.get_client().create_invoice(payload)
-        return invoice.model_dump(mode="json", exclude_none=True)
+        client = await config.get_client()
+        invoice = await api_call(client.create_invoice(payload))
+        return _summary(invoice)
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Update invoice",
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+            openWorldHint=False,
+        )
+    )
     async def update_invoice(
         invoice_id: int,
-        fields: UpdateFields,
+        fields: InvoiceUpdateFields,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
-        """Update selected fields of an invoice, e.g. {"buyer_email": "x@y.pl"}."""
-        await require_approval(
-            ctx, f"update invoice {invoice_id}, fields: {', '.join(sorted(fields))}"
-        )
-        invoice = await config.get_client().update_invoice(invoice_id, fields)
-        return invoice.model_dump(mode="json", exclude_none=True)
+        """Update selected fields of an existing invoice (partial update).
 
-    @mcp.tool()
+        Call this to correct invoice data such as buyer_email, payment_to or
+        description; the user approves the exact field values in a dialog first.
+        Do not use it to change the payment status ('paid' etc.) — that is
+        change_invoice_status — and prefer create_invoice for new documents.
+
+        Returns a summary (id, number, status, amounts) of the updated invoice.
+        Example: update_invoice(invoice_id=123, fields={"buyer_email": "x@y.pl"}).
+        """
+        await require_approval(ctx, f"update invoice {invoice_id}: {format_fields(fields)}")
+        client = await config.get_client()
+        invoice = await api_call(client.update_invoice(invoice_id, fields))
+        return _summary(invoice)
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Change invoice status",
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+            openWorldHint=False,
+        )
+    )
     async def change_invoice_status(
         invoice_id: int,
         status: InvoiceStatus,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
-        """Change invoice status: issued, sent, paid, partial or rejected."""
+        """Set the payment status of an invoice: issued, sent, paid, partial or rejected.
+
+        Call this when the user says an invoice was paid, sent or rejected — it is
+        also the sanctioned alternative to deleting an invoice (there is no delete
+        tool by design). The user approves the change in a dialog first. The
+        invoice_id comes from list_invoices; the operation fails on the API side
+        if the transition is not allowed for the document.
+
+        Returns {"invoice_id", "status"} after the API confirms the change.
+        """
         await require_approval(ctx, f"change status of invoice {invoice_id} to '{status}'")
-        await config.get_client().change_invoice_status(invoice_id, status)
+        client = await config.get_client()
+        await api_call(client.change_invoice_status(invoice_id, status))
         return {"invoice_id": invoice_id, "status": status}
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Download invoice PDF",
+            readOnlyHint=False,
+            destructiveHint=False,
+            idempotentHint=False,
+            openWorldHint=False,
+        )
+    )
     async def download_invoice_pdf(
         invoice_id: int,
         output_path: Annotated[
             str | None,
-            Field(description="Target file path; defaults to ~/Downloads/faktura-<number>.pdf"),
+            Field(
+                description=(
+                    "Optional file path INSIDE the allowed download directory "
+                    "(FAKTUROWNIA_DOWNLOAD_DIR, default ~/Downloads); defaults to "
+                    "faktura-<number>.pdf there"
+                )
+            ),
         ] = None,
     ) -> dict[str, Any]:
-        """Download the invoice PDF to disk."""
-        client = config.get_client()
-        pdf = await client.download_invoice_pdf(invoice_id)
-        if output_path:
-            target = Path(output_path).expanduser()
-        else:
-            number = (await client.get_invoice(invoice_id)).number or str(invoice_id)
-            target = Path.home() / "Downloads" / f"faktura-{number.replace('/', '-')}.pdf"
+        """Download an invoice PDF and save it to the local download directory.
+
+        This writes a file on the user's machine (never overwrites — an existing
+        name gets a numeric suffix) and is restricted to the configured download
+        directory; paths outside it are rejected. Use it when the user wants the
+        document itself; for reading invoice data use get_invoice instead.
+
+        Returns {"path", "size_bytes"} of the saved file.
+        """
+        client = await config.get_client()
+        invoice = await api_call(client.get_invoice(invoice_id))
+        number = invoice.number or str(invoice_id)
+        target = _resolve_download_target(number, output_path)
+        pdf = await api_call(client.download_invoice_pdf(invoice_id))
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(pdf)
         return {"path": str(target), "size_bytes": len(pdf)}
+
+
+def _resolve_download_target(number: str, output_path: str | None) -> Path:
+    """Confine the write to the allowed directory and never overwrite."""
+    base = config.download_dir().resolve()
+    if output_path:
+        raw = Path(output_path).expanduser()
+        candidate = raw if raw.is_absolute() else base / raw
+    else:
+        candidate = base / f"faktura-{number.replace('/', '-')}.pdf"
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(base):
+        raise ToolError(
+            f"Refusing to write outside the allowed download directory ({base}). "
+            "Pass a relative filename or a path inside that directory, or ask the "
+            "user to change FAKTUROWNIA_DOWNLOAD_DIR."
+        )
+    unique = resolved
+    counter = 1
+    while unique.exists():
+        unique = resolved.with_stem(f"{resolved.stem}-{counter}")
+        counter += 1
+    return unique

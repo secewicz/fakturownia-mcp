@@ -1,5 +1,10 @@
 # fakturownia-mcp
 
+[![PyPI](https://img.shields.io/pypi/v/fakturownia-mcp)](https://pypi.org/project/fakturownia-mcp/)
+[![CI](https://github.com/KrzysztofMarmol/fakturownia-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/KrzysztofMarmol/fakturownia-mcp/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/pypi/pyversions/fakturownia-mcp)](https://pypi.org/project/fakturownia-mcp/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 MCP (Model Context Protocol) server exposing a [Fakturownia](https://fakturownia.pl)
 (InvoiceOcean) account as tools for Claude and other MCP clients: invoices
 (list/search, create, update, status changes, PDF download), clients and products.
@@ -21,6 +26,8 @@ Two required environment variables (values from Fakturownia:
 | `FAKTUROWNIA_DOMAIN` | yes | Account subdomain: `mycompany`, `mycompany.fakturownia.pl` and the full URL all work |
 | `FAKTUROWNIA_API_TOKEN` | yes | API authorization code (kept out of URLs and logs) |
 | `FAKTUROWNIA_SKIP_CONFIRM` | no | `1` disables the write-approval dialog (for automation or clients without elicitation) |
+| `FAKTUROWNIA_TIMEOUT` | no | HTTP timeout in seconds (default 30) |
+| `FAKTUROWNIA_DOWNLOAD_DIR` | no | Directory PDF downloads are confined to (default `~/Downloads`); paths outside it are rejected and existing files are never overwritten |
 
 ## Setup
 

@@ -2,19 +2,44 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from mcp.server.fastmcp import FastMCP
 
+from fakturownia_mcp import config
 from fakturownia_mcp.tools import register_all
 
-mcp = FastMCP(
-    "fakturownia",
-    instructions=(
-        "Tools for the Fakturownia (InvoiceOcean) invoicing account configured via "
-        "FAKTUROWNIA_DOMAIN and FAKTUROWNIA_API_TOKEN. List tools return summaries; "
-        "fetch full records with the get_* tools. There is deliberately no tool for "
-        "deleting invoices — change their status instead."
-    ),
-)
+INSTRUCTIONS = """\
+Tools for ONE Fakturownia (InvoiceOcean) invoicing account, configured via
+FAKTUROWNIA_DOMAIN and FAKTUROWNIA_API_TOKEN.
+
+Conventions: dates are YYYY-MM-DD; amounts are strings in the account
+currency (typically PLN); ids are numeric and come from list_* tools —
+printed document numbers like '15/2025' are NOT ids.
+
+Workflow: list_* tools return compact summaries (fetch details with get_*).
+Before creating a client or invoicing by buyer_* fields, search with
+list_clients (by tax_no/name) and prefer create_invoice(client_id=...) to
+avoid duplicate contractors. Expenses are invoices with income=False.
+
+Writes (create_*, update_*, delete_client, change_invoice_status) ask the
+user for approval via an elicitation dialog before touching the API. If the
+user declines, the operation is cancelled — do NOT retry it; ask the user
+how to proceed. There is deliberately no tool for deleting invoices — use
+change_invoice_status instead.
+"""
+
+
+@asynccontextmanager
+async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        await config.aclose_client()
+
+
+mcp = FastMCP("fakturownia", instructions=INSTRUCTIONS, lifespan=_lifespan)
 register_all(mcp)
 
 
