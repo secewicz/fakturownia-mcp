@@ -1,61 +1,28 @@
 # fakturownia-mcp
 
 MCP (Model Context Protocol) server exposing a [Fakturownia](https://fakturownia.pl)
-(InvoiceOcean) account as tools for Claude: invoices (list/search, create, update,
-status changes, PDF download), clients and products.
+(InvoiceOcean) account as tools for Claude and other MCP clients: invoices
+(list/search, create, update, status changes, PDF download), clients and products.
 
-Built on [`fakturownia-client`](https://github.com/KrzysztofMarmol/fakturownia-client) —
+Built on [`fakturownia-client`](https://pypi.org/project/fakturownia-client/) —
 the API token is sent only in the `Authorization: Bearer` header, never in URLs.
-All tools are `async` (backed by `AsyncFakturowniaClient`), so concurrent tool
-calls don't block the server's event loop.
+All tools are `async`, and every write goes through an approval gate.
 
 There is deliberately **no invoice-delete tool** (destructive on financial records);
 use `change_invoice_status` instead.
 
-## Approval gate for writes
+## Configuration
 
-Every mutating tool (`create_*`, `update_*`, `delete_client`,
-`change_invoice_status`) asks for confirmation via **MCP elicitation** before
-touching the API — clients with elicitation support (Claude Code, Claude
-Desktop, MCP Inspector) show a native approval dialog describing the exact
-operation. Declining aborts the call before any request is sent.
+Two required environment variables (values from Fakturownia:
+*Ustawienia → Ustawienia konta → Integracja*):
 
-For clients without elicitation support, or for trusted automation, set
-`FAKTUROWNIA_SKIP_CONFIRM=1` in the server env to disable the gate.
-
-## Tools
-
-| Tool | Description |
-|---|---|
-| `list_invoices` | Search invoices by period, date range, client, number, kind (summaries + `has_more`) |
-| `get_invoice` | Full invoice with positions |
-| `create_invoice` | Issue an invoice (buyer by `client_id` or `buyer_*` fields) |
-| `update_invoice` | Partial update of invoice fields |
-| `change_invoice_status` | `issued` / `sent` / `paid` / `partial` / `rejected` |
-| `download_invoice_pdf` | Saves the PDF (default `~/Downloads/faktura-<number>.pdf`) |
-| `list_clients` / `get_client` / `create_client` / `update_client` / `delete_client` | Contractor CRUD |
-| `list_products` / `get_product` / `create_product` / `update_product` | Product management |
+| Variable | Required | Meaning |
+|---|---|---|
+| `FAKTUROWNIA_DOMAIN` | yes | Account subdomain: `mycompany`, `mycompany.fakturownia.pl` and the full URL all work |
+| `FAKTUROWNIA_API_TOKEN` | yes | API authorization code (kept out of URLs and logs) |
+| `FAKTUROWNIA_SKIP_CONFIRM` | no | `1` disables the write-approval dialog (for automation or clients without elicitation) |
 
 ## Setup
-
-Once published to PyPI, no checkout is needed — `uvx fakturownia-mcp` runs the
-server directly (use `"command": "uvx", "args": ["fakturownia-mcp"]` in client
-configs below instead of the `uv run --directory ...` form).
-
-For development, a sibling checkout of `fakturownia-client` is required
-(editable path dependency — see `[tool.uv.sources]` in `pyproject.toml` for the
-git alternative):
-
-```bash
-git clone https://github.com/KrzysztofMarmol/fakturownia-client
-git clone https://github.com/KrzysztofMarmol/fakturownia-mcp
-cd fakturownia-mcp && uv sync
-```
-
-Configuration (from Fakturownia: Ustawienia → Ustawienia konta → Integracja):
-
-- `FAKTUROWNIA_DOMAIN` — your account subdomain (e.g. `mycompany`)
-- `FAKTUROWNIA_API_TOKEN` — API authorization code
 
 ### Claude Code
 
@@ -63,7 +30,7 @@ Configuration (from Fakturownia: Ustawienia → Ustawienia konta → Integracja)
 claude mcp add fakturownia \
   -e FAKTUROWNIA_DOMAIN=mycompany \
   -e FAKTUROWNIA_API_TOKEN=... \
-  -- uv run --directory /path/to/fakturownia-mcp fakturownia-mcp
+  -- uvx fakturownia-mcp
 ```
 
 ### Claude Desktop (`claude_desktop_config.json`)
@@ -72,8 +39,8 @@ claude mcp add fakturownia \
 {
   "mcpServers": {
     "fakturownia": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/fakturownia-mcp", "fakturownia-mcp"],
+      "command": "/Users/you/.local/bin/uvx",
+      "args": ["fakturownia-mcp"],
       "env": {
         "FAKTUROWNIA_DOMAIN": "mycompany",
         "FAKTUROWNIA_API_TOKEN": "..."
@@ -83,18 +50,73 @@ claude mcp add fakturownia \
 }
 ```
 
+### Any other MCP client / no uv
+
+The server speaks MCP over **stdio**. Any of these commands starts it:
+
+```bash
+uvx fakturownia-mcp                  # zero-install, recommended
+pip install fakturownia-mcp && fakturownia-mcp
+python -m fakturownia_mcp            # after pip install
+```
+
 ### MCP Inspector (interactive testing)
 
 ```bash
-FAKTUROWNIA_DOMAIN=... FAKTUROWNIA_API_TOKEN=... uv run mcp dev src/fakturownia_mcp/server.py
+npx @modelcontextprotocol/inspector \
+  -e FAKTUROWNIA_DOMAIN=... -e FAKTUROWNIA_API_TOKEN=... \
+  uvx fakturownia-mcp
 ```
 
-## Development
+## Tools
 
-```bash
-uv sync --extra dev
-uv run ruff check . && uv run mypy && uv run pytest
-```
+| Tool | Description |
+|---|---|
+| `list_invoices` | Search by period, date range, client, number, kind; `income=false` lists **cost/expense** invoices; paginated summaries + `has_more` |
+| `get_invoice` | Full invoice with positions |
+| `create_invoice` 🔒 | Issue an invoice: buyer by `client_id` or `buyer_*` fields, typed positions, any document kind (`vat`, `proforma`, …) |
+| `update_invoice` 🔒 | Partial update, e.g. `{"buyer_email": "x@y.pl"}` or `{"approval_status": "verified"}` |
+| `change_invoice_status` 🔒 | `issued` / `sent` / `paid` / `partial` / `rejected` |
+| `download_invoice_pdf` | Saves the PDF to disk (default `~/Downloads/faktura-<number>.pdf`) |
+| `list_clients` / `get_client` | Search contractors by name, tax id (NIP), e-mail |
+| `create_client` 🔒 / `update_client` 🔒 / `delete_client` 🔒 | Contractor management |
+| `list_products` / `get_product` / `create_product` 🔒 / `update_product` 🔒 | Product management |
+
+Parameters are fully typed (Pydantic) — date patterns, pagination limits and
+status enums are enforced in the tool JSON Schema before any API call.
+
+Example prompts once connected:
+
+- *"List my unpaid invoices from this month"*
+- *"Show my expenses from June"* → `list_invoices(income=false, ...)`
+- *"Issue a VAT invoice for ACME for 'Consulting', 1000 zł net"* → approval dialog → created
+- *"Mark invoice 52572/07/2026 as paid"*
+- *"Download the PDF of my latest invoice"*
+
+## Approval gate for writes (🔒)
+
+Every mutating tool asks for confirmation via **MCP elicitation** before
+touching the API — clients with elicitation support (Claude Code, Claude
+Desktop, MCP Inspector) show a native approval dialog describing the exact
+operation (e.g. *"create vat invoice for ACME with positions: Consulting"*).
+Declining aborts the call before any request is sent.
+
+Clients without elicitation support get a clear error instead; set
+`FAKTUROWNIA_SKIP_CONFIRM=1` to run without the gate.
+
+## Troubleshooting
+
+- **"command not found" in Claude Desktop** — GUI apps don't inherit your
+  shell's `PATH`; use the full path to `uvx` (`which uvx`).
+- **"Missing environment variables" tool error** — the server starts without
+  credentials and validates them on first use; check both env vars in your
+  client config.
+- **HTTP 401 on every call** — wrong `FAKTUROWNIA_API_TOKEN` or wrong account
+  subdomain in `FAKTUROWNIA_DOMAIN`.
+- **A new release doesn't show up** — `uvx` caches installs; run
+  `uvx fakturownia-mcp@latest` once (or pin `fakturownia-mcp==X.Y.Z`).
+- **Product price update seems ignored** — Fakturownia quirk: send `price_net`
+  and `price_gross` together; a lone `price_net` is ignored by the API.
 
 ## License
 

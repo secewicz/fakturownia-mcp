@@ -1,6 +1,6 @@
 [project]
 name = "fakturownia-mcp"
-version = "0.0.1"
+version = "0.0.2"
 description = "MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
 readme = "README.md"
 requires-python = ">=3.10"
