@@ -24,10 +24,28 @@ All tools are `async`, and every write goes through an approval gate.
 There is deliberately **no invoice-delete tool** (destructive on financial records);
 use `change_invoice_status` instead.
 
+## Compatible platforms
+
+Fakturownia runs the same API under several regional brands — this server
+works with all of them; just pass your full account domain:
+
+| Platform | Region | Example `FAKTUROWNIA_DOMAIN` |
+|---|---|---|
+| fakturownia.pl | Poland | `mycompany` or `mycompany.fakturownia.pl` |
+| invoiceocean.com | Global / USA | `mycompany.invoiceocean.com` |
+| invoiceocean.de | Germany | `mycompany.invoiceocean.de` |
+| vosfactures.fr | France | `mycompany.vosfactures.fr` |
+| bitfactura.es | Spain | `mycompany.bitfactura.es` |
+
+A bare account name defaults to `.fakturownia.pl`; any value containing a
+dot is used as-is.
+
 ## Configuration
 
-Two required environment variables (values from Fakturownia:
-*Ustawienia → Ustawienia konta → Integracja*):
+Two required environment variables (from your account settings, Integration
+section — in Fakturownia: *Ustawienia → Ustawienia konta → Integracja*).
+Every variable also accepts the `INVOICEOCEAN_` prefix (e.g.
+`INVOICEOCEAN_DOMAIN`); the `FAKTUROWNIA_` form wins when both are set:
 
 | Variable | Required | Meaning |
 |---|---|---|

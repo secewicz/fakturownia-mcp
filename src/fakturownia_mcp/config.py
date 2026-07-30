@@ -14,6 +14,18 @@ ENV_TIMEOUT = "FAKTUROWNIA_TIMEOUT"
 ENV_DOWNLOAD_DIR = "FAKTUROWNIA_DOWNLOAD_DIR"
 ENV_SKIP_CONFIRM = "FAKTUROWNIA_SKIP_CONFIRM"
 
+# Every variable also works with the INVOICEOCEAN_ prefix (international brand);
+# the FAKTUROWNIA_ form wins when both are set.
+_ENV_PREFIXES = ("FAKTUROWNIA_", "INVOICEOCEAN_")
+
+
+def _env(suffix: str) -> str:
+    for prefix in _ENV_PREFIXES:
+        value = os.environ.get(prefix + suffix, "").strip()
+        if value:
+            return value
+    return ""
+
 
 class ConfigError(RuntimeError):
     """Raised when required environment variables are missing or invalid."""
@@ -25,17 +37,18 @@ _lock = asyncio.Lock()
 
 
 def _build_client() -> AsyncFakturowniaClient:
-    domain = os.environ.get(ENV_DOMAIN, "").strip()
-    token = os.environ.get(ENV_TOKEN, "").strip()
+    domain = _env("DOMAIN")
+    token = _env("API_TOKEN")
     missing = [name for name, value in ((ENV_DOMAIN, domain), (ENV_TOKEN, token)) if not value]
     if missing:
         raise ConfigError(
             f"Missing environment variables: {', '.join(missing)}. Set {ENV_DOMAIN} "
-            f"(the account subdomain) and {ENV_TOKEN} (API authorization code from "
-            "Fakturownia account settings, Integration section). This is a server "
-            "configuration problem the user must fix — do not retry the tool call."
+            f"(account subdomain or full domain) and {ENV_TOKEN} (API authorization "
+            "code from account settings, Integration section); the INVOICEOCEAN_ "
+            "prefix works too. This is a server configuration problem the user must "
+            "fix — do not retry the tool call."
         )
-    raw_timeout = os.environ.get(ENV_TIMEOUT, "").strip()
+    raw_timeout = _env("TIMEOUT")
     try:
         timeout = float(raw_timeout) if raw_timeout else 30.0
     except ValueError as exc:
@@ -74,8 +87,8 @@ async def aclose_client() -> None:
 
 def download_dir() -> Path:
     """Directory PDF downloads are confined to (default: ~/Downloads)."""
-    return Path(os.environ.get(ENV_DOWNLOAD_DIR, "~/Downloads")).expanduser()
+    return Path(_env("DOWNLOAD_DIR") or "~/Downloads").expanduser()
 
 
 def skip_confirm() -> bool:
-    return os.environ.get(ENV_SKIP_CONFIRM, "").strip() == "1"
+    return _env("SKIP_CONFIRM") == "1"

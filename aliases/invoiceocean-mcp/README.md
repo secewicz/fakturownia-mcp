@@ -16,13 +16,17 @@ API. It ships the same server under an `invoiceocean-mcp` command:
 
 ```bash
 claude mcp add invoiceocean \
-  -e FAKTUROWNIA_DOMAIN=mycompany.invoiceocean.com \
-  -e FAKTUROWNIA_API_TOKEN=... \
+  -e INVOICEOCEAN_DOMAIN=mycompany.invoiceocean.com \
+  -e INVOICEOCEAN_API_TOKEN=... \
   -- uvx invoiceocean-mcp
 ```
 
-Set `FAKTUROWNIA_DOMAIN` to your full `*.invoiceocean.com` domain. Full
-documentation (tools, approval gate, environment variables) lives in the
+All environment variables accept the `INVOICEOCEAN_` prefix
+(`INVOICEOCEAN_DOMAIN`, `INVOICEOCEAN_API_TOKEN`, `INVOICEOCEAN_TIMEOUT`,
+`INVOICEOCEAN_DOWNLOAD_DIR`, `INVOICEOCEAN_SKIP_CONFIRM`). Set the domain to
+your full account domain — the server works with every regional brand of the
+platform: invoiceocean.com, invoiceocean.de, vosfactures.fr, bitfactura.es
+and fakturownia.pl. Full documentation (tools, approval gate) lives in the
 [fakturownia-mcp repository](https://github.com/KrzysztofMarmol/fakturownia-mcp).
 
 ## License

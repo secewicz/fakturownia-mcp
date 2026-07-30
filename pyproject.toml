@@ -9,7 +9,7 @@ authors = [
 ]
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["fakturownia", "invoiceocean", "mcp", "model-context-protocol", "claude"]
+keywords = ["fakturownia", "invoiceocean", "vosfactures", "bitfactura", "mcp", "model-context-protocol", "claude"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

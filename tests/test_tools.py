@@ -254,8 +254,41 @@ async def test_not_found_error_steers_to_list_tools() -> None:
 
 def test_missing_env_vars_raise_clear_error(monkeypatch: pytest.MonkeyPatch) -> None:
     config.set_client(None)
-    monkeypatch.delenv("FAKTUROWNIA_DOMAIN", raising=False)
-    monkeypatch.delenv("FAKTUROWNIA_API_TOKEN", raising=False)
+    for name in (
+        "FAKTUROWNIA_DOMAIN",
+        "FAKTUROWNIA_API_TOKEN",
+        "INVOICEOCEAN_DOMAIN",
+        "INVOICEOCEAN_API_TOKEN",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
     with pytest.raises(ConfigError, match="FAKTUROWNIA_DOMAIN"):
         config._build_client()
+
+
+def test_invoiceocean_env_aliases_work(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("FAKTUROWNIA_DOMAIN", "FAKTUROWNIA_API_TOKEN"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("INVOICEOCEAN_DOMAIN", "mycompany.invoiceocean.com")
+    monkeypatch.setenv("INVOICEOCEAN_API_TOKEN", "tok")
+
+    client = config._build_client()
+    assert client.base_url == "https://mycompany.invoiceocean.com"
+
+
+def test_fakturownia_env_wins_over_invoiceocean(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FAKTUROWNIA_DOMAIN", "firma")
+    monkeypatch.setenv("FAKTUROWNIA_API_TOKEN", "tok")
+    monkeypatch.setenv("INVOICEOCEAN_DOMAIN", "other.invoiceocean.com")
+
+    client = config._build_client()
+    assert client.base_url == "https://firma.fakturownia.pl"
+
+
+async def test_skip_confirm_via_invoiceocean_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("FAKTUROWNIA_SKIP_CONFIRM", raising=False)
+    monkeypatch.setenv("INVOICEOCEAN_SKIP_CONFIRM", "1")
+
+    result = await call_tool("delete_client", {"client_id": 5})
+
+    assert not result.isError
