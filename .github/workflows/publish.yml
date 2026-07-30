@@ -38,7 +38,7 @@ jobs:
         run: |
           python3 - <<'EOF'
           import re, tomllib
-          main = re.search(r'"(.+)"', open("src/fakturownia_mcp/__init__.py").read()).group(1)
+          main = re.search(r'__version__ = "(.+)"', open("src/fakturownia_mcp/__init__.py").read()).group(1)
           with open("aliases/invoiceocean-mcp/pyproject.toml", "rb") as f:
               alias = tomllib.load(f)["project"]
           assert alias["version"] == main, f"alias {alias['version']} != server {main}"
