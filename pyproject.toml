@@ -1,7 +1,7 @@
 [project]
 name = "fakturownia-mcp"
 dynamic = ["version"]
-description = "MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
+description = "Unofficial MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.9,<2.0",
-    "fakturownia-client>=0.1.0",
+    "fakturownia-client>=0.1.2",
 ]
 
 [project.urls]

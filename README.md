@@ -5,9 +5,17 @@
 [![Python](https://img.shields.io/pypi/pyversions/fakturownia-mcp)](https://pypi.org/project/fakturownia-mcp/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-MCP (Model Context Protocol) server exposing a [Fakturownia](https://fakturownia.pl)
-(InvoiceOcean) account as tools for Claude and other MCP clients: invoices
-(list/search, create, update, status changes, PDF download), clients and products.
+**Unofficial** MCP (Model Context Protocol) server exposing a
+[Fakturownia](https://fakturownia.pl) (InvoiceOcean) account as tools for
+Claude and other MCP clients: invoices (list/search, create, update, status
+changes, PDF download), clients and products.
+
+> This is a community-maintained project. It is not affiliated with, endorsed
+> by, or sponsored by Fakturownia sp. z o.o. or InvoiceOcean. "Fakturownia"
+> and "InvoiceOcean" are trademarks of their respective owner, used here only
+> to indicate compatibility. InvoiceOcean users: pass your full
+> `*.invoiceocean.com` domain as `FAKTUROWNIA_DOMAIN`, or install the
+> [`invoiceocean-mcp`](https://pypi.org/project/invoiceocean-mcp/) alias.
 
 Built on [`fakturownia-client`](https://pypi.org/project/fakturownia-client/) —
 the API token is sent only in the `Authorization: Bearer` header, never in URLs.

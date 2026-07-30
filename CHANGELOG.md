@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.1.1] - 2026-07-30
+
+### Added
+- Companion (unofficial) alias package
+  [`invoiceocean-mcp`](https://pypi.org/project/invoiceocean-mcp/) with an
+  `invoiceocean-mcp` command, published in lockstep from this repository.
+
+### Changed
+- Made the unofficial status explicit (README, package descriptions,
+  trademark disclaimer).
+- Requires `fakturownia-client>=0.1.2` (InvoiceOcean domains supported
+  as-is in `normalize_domain`).
+
 ## [0.1.0] - 2026-07-28
 
 ### Added
