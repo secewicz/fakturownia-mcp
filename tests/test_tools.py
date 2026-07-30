@@ -153,11 +153,30 @@ async def test_confirm_false_also_denies() -> None:
     assert result.isError
 
 
-async def test_client_without_elicitation_support_gets_clear_error() -> None:
+async def test_no_elicitation_first_call_demands_two_phase_confirm() -> None:
     result = await call_tool("delete_client", {"client_id": 5})
 
     assert result.isError
-    assert config.ENV_SKIP_CONFIRM in result_text(result)
+    text = result_text(result)
+    assert "CONFIRMATION REQUIRED" in text
+    assert "confirm=true" in text  # steers the model to the two-phase fallback
+
+
+async def test_no_elicitation_confirm_true_executes() -> None:
+    result = await call_tool("delete_client", {"client_id": 5, "confirm": True})
+
+    assert not result.isError
+    assert result.structuredContent == {"deleted_client_id": 5}
+
+
+async def test_confirm_true_does_not_bypass_elicitation_dialog() -> None:
+    result = await call_tool(
+        "change_invoice_status",
+        {"invoice_id": 1, "status": "paid", "confirm": True},
+        elicitation_callback=elicitation_cb(action="decline"),
+    )
+
+    assert result.isError  # dialog-capable client: the dialog decision wins
 
 
 async def test_skip_env_bypasses_gate(monkeypatch: pytest.MonkeyPatch) -> None:

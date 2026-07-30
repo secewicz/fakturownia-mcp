@@ -12,7 +12,14 @@ from pydantic import Field
 from fakturownia_mcp import config
 from fakturownia_mcp.approval import format_fields, require_approval
 from fakturownia_mcp.errors import api_call
-from fakturownia_mcp.schemas import Page, PerPage, ProductUpdateFields, TaxRate, full_record
+from fakturownia_mcp.schemas import (
+    ConfirmFlag,
+    Page,
+    PerPage,
+    ProductUpdateFields,
+    TaxRate,
+    full_record,
+)
 
 Price = Annotated[float | str | None, Field(description="Amount, e.g. 99.99 or '99.99'")]
 
@@ -80,6 +87,7 @@ def register(mcp: FastMCP) -> None:
         tax: TaxRate = 23,
         code: Annotated[str | None, Field(description="Product code/SKU")] = None,
         currency: Annotated[str | None, Field(description="Currency code, e.g. PLN")] = None,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -102,7 +110,7 @@ def register(mcp: FastMCP) -> None:
             "currency": currency,
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        await require_approval(ctx, f"create product: {format_fields(payload)}")
+        await require_approval(ctx, f"create product: {format_fields(payload)}", confirm=confirm)
         client = await config.get_client()
         record = await api_call(client.create_product(payload))
         return _summary(record)
@@ -119,6 +127,7 @@ def register(mcp: FastMCP) -> None:
     async def update_product(
         product_id: int,
         fields: ProductUpdateFields,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -130,7 +139,9 @@ def register(mcp: FastMCP) -> None:
         product. Example: update_product(product_id=9,
         fields={"price_net": "99.0", "price_gross": "121.77"}).
         """
-        await require_approval(ctx, f"update product {product_id}: {format_fields(fields)}")
+        await require_approval(
+            ctx, f"update product {product_id}: {format_fields(fields)}", confirm=confirm
+        )
         client = await config.get_client()
         record = await api_call(client.update_product(product_id, fields))
         return _summary(record)

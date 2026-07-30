@@ -1,3 +1,3 @@
 """MCP server exposing the Fakturownia (InvoiceOcean) API as tools."""
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"

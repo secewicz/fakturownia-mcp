@@ -134,8 +134,12 @@ Desktop, MCP Inspector) show a native approval dialog describing the exact
 operation (e.g. *"create vat invoice for ACME with positions: Consulting"*).
 Declining aborts the call before any request is sent.
 
-Clients without elicitation support get a clear error instead; set
-`FAKTUROWNIA_SKIP_CONFIRM=1` to run without the gate.
+Clients without elicitation support (e.g. Claude Desktop) fall back to
+**two-phase confirmation**: the first call is rejected with instructions, the
+assistant asks you in conversation, and only a repeated call with
+`confirm=true` executes. On dialog-capable clients `confirm=true` does NOT
+bypass the dialog. `FAKTUROWNIA_SKIP_CONFIRM=1` disables the gate entirely
+for trusted automation.
 
 ## Troubleshooting
 

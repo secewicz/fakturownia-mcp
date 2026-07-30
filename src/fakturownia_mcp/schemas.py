@@ -43,6 +43,17 @@ TaxRate = Annotated[
     Field(description="VAT rate, e.g. 23, 8, 0, or 'zw' (exempt) / 'np' (not applicable)"),
 ]
 
+ConfirmFlag = Annotated[
+    bool,
+    Field(
+        description=(
+            "Set true ONLY after the user explicitly approved this exact operation in "
+            "conversation. Needed when the client has no native approval dialogs "
+            "(e.g. Claude Desktop); dialog-capable clients ignore it."
+        )
+    ),
+]
+
 InvoiceNumber = Annotated[
     str,
     Field(description="Full or partial invoice number as printed, e.g. '15/2025' or 'P1/07/2026'"),

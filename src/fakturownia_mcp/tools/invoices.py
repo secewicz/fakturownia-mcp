@@ -15,6 +15,7 @@ from fakturownia_mcp import config
 from fakturownia_mcp.approval import format_fields, require_approval
 from fakturownia_mcp.errors import api_call
 from fakturownia_mcp.schemas import (
+    ConfirmFlag,
     DateStr,
     InvoiceNumber,
     InvoiceStatus,
@@ -144,6 +145,7 @@ def register(mcp: FastMCP) -> None:
         positions: Annotated[
             list[PositionInput] | None, Field(description="Invoice line items")
         ] = None,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -168,7 +170,9 @@ def register(mcp: FastMCP) -> None:
             for p in (positions or [])
         )
         await require_approval(
-            ctx, f"create {kind} invoice for {buyer}; positions: {described or '(none)'}"
+            ctx,
+            f"create {kind} invoice for {buyer}; positions: {described or '(none)'}",
+            confirm=confirm,
         )
         payload: dict[str, Any] = {
             "kind": kind,
@@ -198,6 +202,7 @@ def register(mcp: FastMCP) -> None:
     async def update_invoice(
         invoice_id: int,
         fields: InvoiceUpdateFields,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -211,7 +216,9 @@ def register(mcp: FastMCP) -> None:
         Returns a summary (id, number, status, amounts) of the updated invoice.
         Example: update_invoice(invoice_id=123, fields={"buyer_email": "x@y.pl"}).
         """
-        await require_approval(ctx, f"update invoice {invoice_id}: {format_fields(fields)}")
+        await require_approval(
+            ctx, f"update invoice {invoice_id}: {format_fields(fields)}", confirm=confirm
+        )
         client = await config.get_client()
         invoice = await api_call(client.update_invoice(invoice_id, fields))
         return _summary(invoice)
@@ -228,6 +235,7 @@ def register(mcp: FastMCP) -> None:
     async def change_invoice_status(
         invoice_id: int,
         status: InvoiceStatus,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -241,7 +249,9 @@ def register(mcp: FastMCP) -> None:
 
         Returns {"invoice_id", "status"} after the API confirms the change.
         """
-        await require_approval(ctx, f"change status of invoice {invoice_id} to '{status}'")
+        await require_approval(
+            ctx, f"change status of invoice {invoice_id} to '{status}'", confirm=confirm
+        )
         client = await config.get_client()
         await api_call(client.change_invoice_status(invoice_id, status))
         return {"invoice_id": invoice_id, "status": status}

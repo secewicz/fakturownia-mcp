@@ -24,8 +24,11 @@ list_clients (by tax_no/name) and prefer create_invoice(client_id=...) to
 avoid duplicate contractors. Expenses are invoices with income=False.
 
 Writes (create_*, update_*, delete_client, change_invoice_status) ask the
-user for approval via an elicitation dialog before touching the API. If the
-user declines, the operation is cancelled — do NOT retry it; ask the user
+user for approval via an elicitation dialog before touching the API. On
+clients without elicitation the first call is rejected with instructions:
+present the operation to the user and re-call with confirm=true ONLY after
+they explicitly agree in conversation. If the user declines (dialog or
+conversation), the operation is cancelled — do NOT retry it; ask the user
 how to proceed. There is deliberately no tool for deleting invoices — use
 change_invoice_status instead.
 """

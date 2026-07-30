@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.2.0] - 2026-07-30
+
+### Added
+- Two-phase confirmation fallback for clients without elicitation support
+  (e.g. Claude Desktop): write tools take an optional `confirm` flag; the
+  first call is rejected with instructions and only a repeated call with
+  `confirm=true` (after the user agreed in conversation) executes. On
+  dialog-capable clients `confirm=true` does not bypass the dialog.
+
 ## [0.1.2] - 2026-07-30
 
 ### Added

@@ -38,18 +38,33 @@ def format_fields(fields: dict[str, Any], *, max_value: int = 80, max_total: int
     return rendered if len(rendered) <= max_total else rendered[: max_total - 1] + "…"
 
 
-async def require_approval(ctx: Context, summary: str) -> None:  # type: ignore[type-arg]
-    """Return silently when approved; raise :class:`ApprovalDenied` otherwise."""
+async def require_approval(
+    ctx: Context,  # type: ignore[type-arg]
+    summary: str,
+    *,
+    confirm: bool = False,
+) -> None:
+    """Return silently when approved; raise :class:`ApprovalDenied` otherwise.
+
+    Clients with elicitation support get a native approval dialog — the
+    ``confirm`` tool parameter is ignored there, so the dialog cannot be
+    bypassed. Clients without elicitation fall back to two-phase confirmation:
+    the first call is rejected with instructions, and the tool must be called
+    again with ``confirm=true`` after the user agreed in conversation.
+    """
     if config.skip_confirm():
         return
     supports_elicitation = ctx.session.check_client_capability(
         ClientCapabilities(elicitation=ElicitationCapability())
     )
     if not supports_elicitation:
+        if confirm:
+            return
         raise ApprovalDenied(
-            f"Cannot ask the user to approve: {summary}. The connected MCP client does "
-            "not support elicitation. Ask the user to confirm in conversation and, if "
-            f"they trust this setup, to set {config.ENV_SKIP_CONFIRM}=1 in the server env."
+            f"CONFIRMATION REQUIRED (no approval dialogs in this client): {summary}. "
+            "Present this exact operation to the user and, ONLY after they explicitly "
+            "agree in conversation, call the tool again with confirm=true. If they "
+            "decline, do not retry — ask how they want to proceed."
         )
     result = await ctx.elicit(
         message=f"Fakturownia — approve write operation?\n{summary}",

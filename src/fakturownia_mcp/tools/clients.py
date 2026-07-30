@@ -12,7 +12,7 @@ from pydantic import Field
 from fakturownia_mcp import config
 from fakturownia_mcp.approval import format_fields, require_approval
 from fakturownia_mcp.errors import api_call
-from fakturownia_mcp.schemas import ClientUpdateFields, Page, PerPage, full_record
+from fakturownia_mcp.schemas import ClientUpdateFields, ConfirmFlag, Page, PerPage, full_record
 
 TaxNo = Annotated[str, Field(description="Tax id (NIP), digits only, e.g. 1234567890")]
 
@@ -94,6 +94,7 @@ def register(mcp: FastMCP) -> None:
         company: Annotated[
             bool, Field(description="True for a company, False for a person")
         ] = True,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -119,7 +120,7 @@ def register(mcp: FastMCP) -> None:
             "company": company,
         }
         payload = {k: v for k, v in payload.items() if v is not None}
-        await require_approval(ctx, f"create client: {format_fields(payload)}")
+        await require_approval(ctx, f"create client: {format_fields(payload)}", confirm=confirm)
         client = await config.get_client()
         record = await api_call(client.create_client(payload))
         return _summary(record)
@@ -136,6 +137,7 @@ def register(mcp: FastMCP) -> None:
     async def update_client(
         client_id: int,
         fields: ClientUpdateFields,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -146,7 +148,9 @@ def register(mcp: FastMCP) -> None:
         in a dialog first. Returns a summary of the updated client.
         Example: update_client(client_id=5, fields={"email": "new@acme.pl"}).
         """
-        await require_approval(ctx, f"update client {client_id}: {format_fields(fields)}")
+        await require_approval(
+            ctx, f"update client {client_id}: {format_fields(fields)}", confirm=confirm
+        )
         client = await config.get_client()
         record = await api_call(client.update_client(client_id, fields))
         return _summary(record)
@@ -162,6 +166,7 @@ def register(mcp: FastMCP) -> None:
     )
     async def delete_client(
         client_id: int,
+        confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
     ) -> dict[str, Any]:
@@ -177,6 +182,8 @@ def register(mcp: FastMCP) -> None:
         """
         client = await config.get_client()
         record = await api_call(client.get_client(client_id))
-        await require_approval(ctx, f"DELETE client {client_id} ({record.name!r}) — irreversible")
+        await require_approval(
+            ctx, f"DELETE client {client_id} ({record.name!r}) — irreversible", confirm=confirm
+        )
         await api_call(client.delete_client(client_id))
         return {"deleted_client_id": client_id}
