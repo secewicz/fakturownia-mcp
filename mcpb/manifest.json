@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing: invoices, clients, products, payments.",
   "author": {
     "name": "Krzysztof Marmol",
@@ -44,6 +44,40 @@
       "default": "${HOME}/Downloads"
     }
   },
+  "tools": [
+    { "name": "list_invoices", "description": "Search invoices by period, client, number, kind; income=false lists expenses" },
+    { "name": "get_invoice", "description": "Full invoice record with line items" },
+    { "name": "create_invoice", "description": "Issue an invoice (approval required)" },
+    { "name": "update_invoice", "description": "Partial invoice update (approval required)" },
+    { "name": "change_invoice_status", "description": "Set issued/sent/paid/partial/rejected (approval required)" },
+    { "name": "send_invoice_by_email", "description": "E-mail the invoice PDF to the buyer or given recipients (approval required)" },
+    { "name": "download_invoice_pdf", "description": "Save the invoice PDF into the configured download directory" },
+    { "name": "list_payments", "description": "Banking payments, optionally with the invoices they settle" },
+    { "name": "create_payment", "description": "Record incoming money against invoices (approval required)" },
+    { "name": "delete_payment", "description": "Remove a mistaken payment record (approval required)" },
+    { "name": "list_clients", "description": "Search contractors by name, tax id, e-mail" },
+    { "name": "get_client", "description": "Full contractor record" },
+    { "name": "create_client", "description": "Add a contractor (approval required)" },
+    { "name": "update_client", "description": "Update contractor data (approval required)" },
+    { "name": "delete_client", "description": "Delete a contractor (approval required)" },
+    { "name": "list_products", "description": "List products" },
+    { "name": "get_product", "description": "Full product record" },
+    { "name": "create_product", "description": "Add a product (approval required)" },
+    { "name": "update_product", "description": "Update a product (approval required)" }
+  ],
+  "prompts": [
+    {
+      "name": "monthly_summary",
+      "description": "Revenue, costs, unpaid invoices and payments for one month",
+      "arguments": ["month"],
+      "text": "Prepare a financial summary of my Fakturownia account for month ${arguments.month} (empty = current month): total revenue and costs from list_invoices (income=false for costs), incoming money from list_payments(include_invoices=true), unpaid or partially paid sales invoices, and payments not linked to any invoice. Present a short table plus 2-3 sentences of commentary; amounts are strings in the account currency."
+    },
+    {
+      "name": "chase_unpaid",
+      "description": "Find overdue invoices and draft payment reminders (nothing is sent without approval)",
+      "text": "Find my overdue invoices: list_invoices(period='all'), keep unpaid sales invoices with payment_to before today, confirm buyer e-mails via get_invoice, then show a table (number, buyer, e-mail, gross amount, days overdue) and draft a short polite reminder in Polish for each. Do NOT send anything until I explicitly pick invoices; send_invoice_by_email will still ask for approval."
+    }
+  ],
   "compatibility": {
     "platforms": ["darwin", "linux", "win32"],
     "runtimes": {

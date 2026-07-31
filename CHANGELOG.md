@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.2] - 2026-07-31
+
+### Fixed
+- `.mcpb` manifest now declares the prompts (and tools) — Claude Desktop
+  blocks undeclared prompts at run-time ("attempted undeclared prompt"), so
+  `monthly_summary` / `chase_unpaid` did not work from the bundle.
+
 ## [0.3.1] - 2026-07-31
 
 ### Fixed
