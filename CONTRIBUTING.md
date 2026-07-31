@@ -33,7 +33,7 @@ claude mcp add fakturownia-dev \
    `src/fakturownia_mcp/__init__.py`.
 2. Commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. The `publish.yml` workflow tests, builds and uploads to PyPI
-   (requires the `PYPI_API_TOKEN` repository secret).
+   (publishes via PyPI trusted publishing — GitHub OIDC, no token secret needed).
 
 Release `fakturownia-client` first when the server depends on new client
 features.
