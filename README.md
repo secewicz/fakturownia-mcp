@@ -59,6 +59,10 @@ Every variable also accepts the `INVOICEOCEAN_` prefix (e.g.
 
 ### Claude Code
 
+Claude Code configures MCP servers with `claude mcp add` (it does not install
+`.mcpb` bundles — those are for the desktop app). This runs the exact same
+server the bundle ships:
+
 ```bash
 claude mcp add fakturownia \
   -e FAKTUROWNIA_DOMAIN=mycompany \
@@ -66,14 +70,28 @@ claude mcp add fakturownia \
   -- uvx fakturownia-mcp
 ```
 
+Scope tip: add `--scope user` to make the server available in every project;
+verify with `/mcp` inside a session. If you already use the manual Claude
+Desktop config below, `claude mcp add-from-claude-desktop` can import it.
+
 ### Claude Desktop — one-click install (.mcpb)
 
-Download `fakturownia-mcp-X.Y.Z.mcpb` from the
-[latest GitHub release](https://github.com/KrzysztofMarmol/fakturownia-mcp/releases/latest),
-double-click it (or drag it onto Claude Desktop) and fill in the domain and
-API token in the install dialog — the token field is stored securely and the
-PDF download directory is configurable there too. Requires
-[uv](https://docs.astral.sh/uv/) on the machine.
+1. Download `fakturownia-mcp-X.Y.Z.mcpb` from the
+   [latest GitHub release](https://github.com/KrzysztofMarmol/fakturownia-mcp/releases/latest).
+2. Double-click the file — or open **Settings → Extensions** in Claude
+   Desktop and drag the file onto the *"Drag .MCPB or .DXT files here to
+   install"* area.
+3. Fill in the install dialog (also available later under **Configure**):
+   *Account domain* and *API token* are required — the token field is masked
+   and stored securely by the app, never written to a plain-text config file;
+   *PDF download directory* defaults to `~/Downloads`.
+4. Under **Tool permissions** you can choose when Claude may use the tools;
+   writes additionally go through this server's own approval flow.
+
+Requires [uv](https://docs.astral.sh/uv/) on the machine — the app resolves
+`fakturownia-mcp` from PyPI on first launch. Right after a new release, give
+PyPI a minute or two before installing, or the first launch may fail with
+"no version of fakturownia-mcp==X.Y.Z" (just restart the app to retry).
 
 ### Claude Desktop — manual (`claude_desktop_config.json`)
 
