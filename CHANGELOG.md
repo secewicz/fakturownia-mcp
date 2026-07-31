@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.4] - 2026-07-31
+
+### Fixed
+- Claude Desktop rejected the bundle's prompts with "content validation
+  failed / potential prompt injection": the host compares the text a bundle
+  server returns from prompts/get with the manifest declaration. The prompt
+  templates are now a single source of truth shared verbatim between
+  `prompts.py` and `mcpb/manifest.json` (plain `${arguments.month}`
+  substitution only), with a test enforcing exact equality.
+
 ## [0.3.3] - 2026-07-31
 
 ### Fixed

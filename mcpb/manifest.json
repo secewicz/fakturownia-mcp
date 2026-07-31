@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing: invoices, clients, products, payments.",
   "author": {
     "name": "Krzysztof Marmol",
@@ -70,12 +70,12 @@
       "name": "monthly_summary",
       "description": "Revenue, costs, unpaid invoices and payments for one month",
       "arguments": ["month"],
-      "text": "Prepare a financial summary of my Fakturownia account for month ${arguments.month} (empty = current month): total revenue and costs from list_invoices (income=false for costs), incoming money from list_payments(include_invoices=true), unpaid or partially paid sales invoices, and payments not linked to any invoice. Present a short table plus 2-3 sentences of commentary; amounts are strings in the account currency."
+      "text": "Prepare a financial summary of my Fakturownia account for month '${arguments.month}' (if empty, use the current month). 1) Use list_invoices with date_from/date_to covering the month for sales invoices, and again with income=false for cost invoices; paginate until has_more is false. 2) Use list_payments(include_invoices=true) to see which money actually arrived that month. 3) Report: total net/gross revenue, total costs, the resulting balance, unpaid or partially paid sales invoices (number, buyer, amount, payment_to), and payments not linked to any invoice. Amounts are strings in the account currency - do not convert them. Present the summary as a short table plus 2-3 sentences of commentary."
     },
     {
       "name": "chase_unpaid",
       "description": "Find overdue invoices and draft payment reminders (nothing is sent without approval)",
-      "text": "Find my overdue invoices: list_invoices(period='all'), keep unpaid sales invoices with payment_to before today, confirm buyer e-mails via get_invoice, then show a table (number, buyer, e-mail, gross amount, days overdue) and draft a short polite reminder in Polish for each. Do NOT send anything until I explicitly pick invoices; send_invoice_by_email will still ask for approval."
+      "text": "Find my overdue invoices and prepare payment reminders. 1) Use list_invoices(period='all') and keep sales invoices whose status is not 'paid' and whose payment_to is before today. 2) For each, fetch get_invoice to confirm the buyer e-mail and amounts. 3) Show a table: number, buyer, buyer_email, gross amount, days overdue - ordered by days overdue descending. 4) Draft a short, polite reminder e-mail in Polish for each buyer, but DO NOT send anything yet. Only after I explicitly pick invoices may you use send_invoice_by_email, and it will still ask for approval."
     }
   ],
   "compatibility": {

@@ -118,6 +118,24 @@ async def test_monthly_summary_prompt_renders() -> None:
     assert "list_payments" in text
 
 
+async def test_prompt_texts_match_manifest_declarations_exactly() -> None:
+    """Claude Desktop validates prompts/get responses against the manifest text
+    (with ${arguments.KEY} substituted) and rejects mismatches as potential
+    prompt injection — the server must return exactly the declared template."""
+    manifest = {p["name"]: p for p in json.loads(MANIFEST.read_text())["prompts"]}
+
+    async with client_session(mcp._mcp_server) as session:
+        monthly = await session.get_prompt("monthly_summary", {"month": "2026-06"})
+        chase = await session.get_prompt("chase_unpaid", {})
+        descriptions = {p.name: p.description for p in (await session.list_prompts()).prompts}
+
+    expected_monthly = manifest["monthly_summary"]["text"].replace("${arguments.month}", "2026-06")
+    assert monthly.messages[0].content.text == expected_monthly
+    assert chase.messages[0].content.text == manifest["chase_unpaid"]["text"]
+    for name, declared in manifest.items():
+        assert descriptions[name] == declared["description"], name
+
+
 async def test_list_invoices_roundtrip() -> None:
     async with client_session(mcp._mcp_server) as session:
         result = await session.call_tool("list_invoices", {"period": "this_month"})

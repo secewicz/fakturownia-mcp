@@ -3,9 +3,9 @@
 # the == pin below must match the release tag (publish.yml checks this).
 [project]
 name = "fakturownia-mcp-bundle"
-version = "0.3.3"
+version = "0.3.4"
 description = "Runtime environment for the fakturownia-mcp MCPB bundle"
 requires-python = ">=3.10"
 dependencies = [
-    "fakturownia-mcp==0.3.3",
+    "fakturownia-mcp==0.3.4",
 ]
