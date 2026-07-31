@@ -1,6 +1,11 @@
+import json
+from pathlib import Path
+
 from mcp.shared.memory import create_connected_server_and_client_session as client_session
 
 from fakturownia_mcp.server import mcp
+
+MANIFEST = Path(__file__).parent.parent / "mcpb" / "manifest.json"
 
 EXPECTED_TOOLS = {
     "list_invoices",
@@ -58,6 +63,40 @@ async def test_docstrings_meet_guidance_bar() -> None:
         assert tool.description, tool.name
         sentences = [s for s in tool.description.split(".") if s.strip()]
         assert len(sentences) >= 3, f"{tool.name} description too terse"
+
+
+async def test_mcpb_manifest_declares_exactly_the_registered_tools_and_prompts() -> None:
+    """Claude Desktop rejects undeclared prompts at run-time — keep the manifest in sync."""
+    manifest = json.loads(MANIFEST.read_text())
+    async with client_session(mcp._mcp_server) as session:
+        tools = {t.name for t in (await session.list_tools()).tools}
+        prompts = {p.name for p in (await session.list_prompts()).prompts}
+
+    assert {t["name"] for t in manifest["tools"]} == tools
+    assert {p["name"] for p in manifest["prompts"]} == prompts
+
+
+async def test_write_tools_have_confirm_and_read_tools_do_not() -> None:
+    async with client_session(mcp._mcp_server) as session:
+        tools = {t.name: t for t in (await session.list_tools()).tools}
+
+    for name, tool in tools.items():
+        has_confirm = "confirm" in tool.inputSchema.get("properties", {})
+        if tool.annotations.readOnlyHint:
+            assert not has_confirm, f"{name} is read-only but exposes confirm"
+        elif name == "download_invoice_pdf":  # local write, no API mutation → no gate
+            assert not has_confirm
+        else:
+            assert has_confirm, f"{name} mutates the API but lacks the confirm fallback"
+
+
+async def test_docstrings_document_the_return_shape() -> None:
+    """Docstrings are the only output documentation (no full outputSchema by design)."""
+    async with client_session(mcp._mcp_server) as session:
+        tools = (await session.list_tools()).tools
+
+    for tool in tools:
+        assert "Returns" in (tool.description or ""), f"{tool.name} lacks a Returns sentence"
 
 
 async def test_prompts_registered() -> None:

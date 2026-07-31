@@ -145,7 +145,15 @@ def register(mcp: FastMCP) -> None:
         sell_date: DateStr | None = None,
         payment_to: DateStr | None = None,
         positions: Annotated[
-            list[PositionInput] | None, Field(description="Invoice line items")
+            list[PositionInput] | None,
+            Field(
+                description=(
+                    "Invoice line items. Each needs a name plus price_net or "
+                    'total_price_gross for a non-zero amount, e.g. {"name": "Consulting", '
+                    '"quantity": 10, "price_net": 150, "tax": 23} or {"name": "Usługa", '
+                    '"total_price_gross": 1230.00, "tax": 23}.'
+                )
+            ),
         ] = None,
         confirm: ConfirmFlag = False,
         *,
@@ -154,19 +162,27 @@ def register(mcp: FastMCP) -> None:
         """Create a new invoice (default kind 'vat') in the account.
 
         The user approves via a confirmation dialog before anything is created;
-        if they decline, do not retry — ask them instead. Prefer billing an
-        existing contractor: find them with list_clients(tax_no=...) and pass
-        client_id, which fills the buyer data and avoids duplicate contractors;
-        use buyer_* fields only for one-off buyers. Each position needs a name
-        plus price_net or total_price_gross; issue_date defaults to today on the
-        server side. Do not use this to modify an existing invoice — that is
-        update_invoice / change_invoice_status.
+        if they decline, do not retry — ask them instead. Either client_id or
+        buyer_name is required. Prefer billing an existing contractor: find them
+        with list_clients(tax_no=...) and pass client_id, which fills the buyer
+        data and avoids duplicate contractors; use buyer_* fields only for
+        one-off buyers. Each position needs a name plus price_net or
+        total_price_gross; issue_date defaults to today on the server side. Do
+        not use this to modify an existing invoice — that is update_invoice /
+        change_invoice_status.
 
         Returns a summary of the created invoice: its id (for later tool calls)
         and the assigned number. Example: create_invoice(client_id=123,
         positions=[{"name": "Consulting", "quantity": 10, "price_net": 150, "tax": 23}]).
         """
-        buyer = buyer_name or (f"client_id={client_id}" if client_id else "unknown buyer")
+        if client_id is None and not buyer_name:
+            raise ToolError(
+                "Either client_id or buyer_name is required. Find an existing "
+                "contractor with list_clients(tax_no=... or name=...) and pass "
+                "client_id, e.g. create_invoice(client_id=123, positions=[...]); "
+                "use buyer_name only for a one-off buyer."
+            )
+        buyer = buyer_name or f"client_id={client_id}"
         described = ", ".join(
             f"{p.quantity} x {p.name} ({p.total_price_gross or p.price_net})"
             for p in (positions or [])

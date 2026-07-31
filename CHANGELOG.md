@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.3] - 2026-07-31
+
+### Fixed
+- Input-schema audit (per Anthropic tool-writing guidance): `create_payment`
+  rejects `invoice_id` together with `invoice_ids` (clear error with an
+  example, raised before the approval dialog) and accepts a string `price`;
+  `create_invoice` requires `client_id` or `buyer_name` up front instead of
+  wasting an approval on a doomed call; e-mail recipients and dates are
+  format-validated in the tool schema (`2026-13-01` no longer passes).
+- `positions` parameter now carries a worked example in its description.
+- New CI guards: `mcpb/manifest.json` tool/prompt declarations must match the
+  registered ones; every write tool must expose `confirm`; every docstring
+  must document its return shape.
+
 ## [0.3.2] - 2026-07-31
 
 ### Fixed

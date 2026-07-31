@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from fakturownia_client.models import Payment
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -77,16 +78,29 @@ def register(mcp: FastMCP) -> None:
         )
     )
     async def create_payment(
-        price: Annotated[float, Field(gt=0, description="Payment amount")],
+        price: Annotated[
+            float | str, Field(description="Payment amount (positive), e.g. 500.0 or '500.00'")
+        ],
         name: Annotated[
             str | None, Field(description="Payment title, e.g. 'Transfer FV 12/2026'")
         ] = None,
         invoice_id: Annotated[
-            int | None, Field(description="Invoice this payment settles (from list_invoices)")
+            int | None,
+            Field(
+                description=(
+                    "Invoice this payment settles (from list_invoices). "
+                    "Mutually exclusive with invoice_ids — pass at most one of them."
+                )
+            ),
         ] = None,
         invoice_ids: Annotated[
             list[int] | None,
-            Field(description="Multiple invoices to settle, in order — instead of invoice_id"),
+            Field(
+                description=(
+                    "Multiple invoices to settle, in array order. "
+                    "Mutually exclusive with invoice_id — pass at most one of them."
+                )
+            ),
         ] = None,
         currency: Annotated[str | None, Field(description="Currency code, e.g. PLN")] = None,
         paid: Annotated[bool, Field(description="Mark the payment as received")] = True,
@@ -106,6 +120,20 @@ def register(mcp: FastMCP) -> None:
         Returns a summary of the created payment (id, name, price, invoice_id).
         Example: create_payment(price=500.0, invoice_id=123, name="Przelew mBank").
         """
+        if invoice_id is not None and invoice_ids is not None:
+            raise ToolError(
+                "Pass either invoice_id or invoice_ids, not both. Example: "
+                "create_payment(price=500.0, invoice_id=123) for one invoice, or "
+                "create_payment(price=500.0, invoice_ids=[123, 124]) to settle "
+                "several in order."
+            )
+        try:
+            if float(price) <= 0:
+                raise ToolError("price must be a positive amount, e.g. 500.0 or '500.00'.")
+        except ValueError:
+            raise ToolError(
+                f"price {price!r} is not a number — pass e.g. 500.0 or '500.00'."
+            ) from None
         target = (
             f"invoice {invoice_id}"
             if invoice_id

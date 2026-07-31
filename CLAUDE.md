@@ -54,6 +54,16 @@ known future task). `server.py` builds the `FastMCP` instance with agent-facing
   `panel_url`, `payment_url`) from any full model dump.
 
 Tool design rules (tests in `test_tool_registration.py` enforce them):
+- tools return `dict[str, Any]` **on purpose** — no typed output models / full
+  outputSchema. Full schemas would land in `tools/list` (context cost in every
+  conversation, ×19 tools) while duplicating the "Returns ..." sentences that
+  every docstring must contain (test-enforced). Do not "fix" this.
+- mutually exclusive params (e.g. create_payment invoice_id/invoice_ids) are
+  flat optional properties + rule in descriptions + server-side check that
+  raises BEFORE the approval dialog — never top-level oneOf/anyOf (the
+  Anthropic API rejects those in input_schema);
+- the `tools`/`prompts` declared in `mcpb/manifest.json` must exactly match
+  the registered ones (Claude Desktop rejects undeclared prompts; test-enforced);
 - every tool has `ToolAnnotations` (readOnly/destructive/idempotent/openWorld
   + human `title`) and a description of at least 3 sentences following
   what / when to use / when not / returns / example;

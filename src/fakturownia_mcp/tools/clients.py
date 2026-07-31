@@ -14,7 +14,15 @@ from fakturownia_mcp.approval import format_fields, require_approval
 from fakturownia_mcp.errors import api_call
 from fakturownia_mcp.schemas import ClientUpdateFields, ConfirmFlag, Page, PerPage, full_record
 
-TaxNo = Annotated[str, Field(description="Tax id (NIP), digits only, e.g. 1234567890")]
+TaxNo = Annotated[
+    str,
+    Field(
+        description=(
+            "Tax id — Polish NIP as digits only, e.g. 1234567890; "
+            "foreign tax ids are passed to the API as-is"
+        )
+    ),
+]
 
 _READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 

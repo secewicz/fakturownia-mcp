@@ -216,6 +216,62 @@ async def test_send_invoice_by_email_declined_sends_nothing() -> None:
     assert not any(r.url.path == "/invoices/1/send_by_email.json" for r in RECORDED)
 
 
+async def test_create_payment_rejects_both_invoice_id_and_invoice_ids() -> None:
+    result = await call_tool(
+        "create_payment",
+        {"price": 500.0, "invoice_id": 1, "invoice_ids": [2, 3]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "not both" in result_text(result)
+    assert "create_payment(price=500.0, invoice_id=123)" in result_text(result)
+    assert not any(r.url.path == "/banking/payments.json" for r in RECORDED)  # no API call
+
+
+async def test_create_payment_rejects_nonpositive_price_before_dialog() -> None:
+    result = await call_tool("create_payment", {"price": "-5"}, elicitation_callback=APPROVE)
+
+    assert result.isError
+    assert not RECORDED
+
+
+async def test_create_payment_accepts_string_price() -> None:
+    result = await call_tool(
+        "create_payment", {"price": "500.00", "invoice_id": 1}, elicitation_callback=APPROVE
+    )
+
+    assert not result.isError
+
+
+async def test_create_invoice_requires_client_id_or_buyer_name() -> None:
+    result = await call_tool(
+        "create_invoice",
+        {"positions": [{"name": "Usługa", "total_price_gross": 123.0}]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "client_id or buyer_name" in result_text(result)
+    assert not RECORDED  # rejected before any dialog or API call
+
+
+async def test_send_invoice_by_email_rejects_invalid_address_via_schema() -> None:
+    result = await call_tool(
+        "send_invoice_by_email",
+        {"invoice_id": 1, "email_to": ["not-an-email"]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+
+
+async def test_bad_calendar_date_rejected_by_schema() -> None:
+    result = await call_tool("list_invoices", {"date_from": "2026-13-01"})
+
+    assert result.isError
+
+
 async def test_send_invoice_by_email_rejects_six_recipients_via_schema() -> None:
     result = await call_tool(
         "send_invoice_by_email",

@@ -14,7 +14,10 @@ InvoiceStatus = Literal["issued", "sent", "paid", "partial", "rejected"]
 
 DateStr = Annotated[
     str,
-    Field(description="Date in YYYY-MM-DD format", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    Field(
+        description="Date in YYYY-MM-DD format",
+        pattern=r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$",
+    ),
 ]
 
 Page = Annotated[int, Field(ge=1, description="Page number (1-based)")]
@@ -60,7 +63,7 @@ InvoiceNumber = Annotated[
 ]
 
 EmailList = Annotated[
-    list[str],
+    list[Annotated[str, Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]],
     Field(
         min_length=1,
         max_length=5,
