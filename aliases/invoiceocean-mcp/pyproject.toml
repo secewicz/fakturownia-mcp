@@ -1,6 +1,6 @@
 [project]
 name = "invoiceocean-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unofficial MCP server for InvoiceOcean invoicing (alias for fakturownia-mcp)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Accounting",
 ]
 # Pinned exactly: this alias always mirrors one fakturownia-mcp release.
-dependencies = ["fakturownia-mcp==0.2.0"]
+dependencies = ["fakturownia-mcp==0.3.0"]
 
 [project.urls]
 Repository = "https://github.com/KrzysztofMarmol/fakturownia-mcp"

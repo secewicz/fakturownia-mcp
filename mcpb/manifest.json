@@ -1,0 +1,55 @@
+{
+  "manifest_version": "0.4",
+  "name": "fakturownia-mcp",
+  "display_name": "Fakturownia (unofficial)",
+  "version": "0.3.0",
+  "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing: invoices, clients, products, payments.",
+  "author": {
+    "name": "Krzysztof Marmol",
+    "email": "krzysztof.marmol@gmail.com"
+  },
+  "homepage": "https://github.com/KrzysztofMarmol/fakturownia-mcp",
+  "server": {
+    "type": "uv",
+    "entry_point": "src/server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "--directory", "${__dirname}", "src/server.py"],
+      "env": {
+        "FAKTUROWNIA_DOMAIN": "${user_config.domain}",
+        "FAKTUROWNIA_API_TOKEN": "${user_config.api_token}",
+        "FAKTUROWNIA_DOWNLOAD_DIR": "${user_config.download_dir}"
+      }
+    }
+  },
+  "user_config": {
+    "domain": {
+      "type": "string",
+      "title": "Account domain",
+      "description": "Your account subdomain: mycompany, mycompany.fakturownia.pl or mycompany.invoiceocean.com",
+      "required": true
+    },
+    "api_token": {
+      "type": "string",
+      "title": "API token",
+      "description": "API authorization code from your account settings (Integration section); sent only in the Authorization header",
+      "sensitive": true,
+      "required": true
+    },
+    "download_dir": {
+      "type": "directory",
+      "title": "PDF download directory",
+      "description": "Invoice PDFs are saved only inside this directory",
+      "required": false,
+      "default": "${HOME}/Downloads"
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  },
+  "keywords": ["fakturownia", "invoiceocean", "invoices", "accounting"],
+  "license": "MIT"
+}

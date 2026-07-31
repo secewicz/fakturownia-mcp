@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.9,<2.0",
-    "fakturownia-client>=0.1.2",
+    "fakturownia-client>=0.2.0",
 ]
 
 [project.urls]

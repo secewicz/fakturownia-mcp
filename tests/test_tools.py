@@ -1,10 +1,18 @@
+import json
 from pathlib import Path
 
 import pytest
 
 from fakturownia_mcp import config
 from fakturownia_mcp.config import ConfigError
-from tests.conftest import call_tool, elicitation_cb, last_request_params, result_text, tool_fn
+from tests.conftest import (
+    RECORDED,
+    call_tool,
+    elicitation_cb,
+    last_request_params,
+    result_text,
+    tool_fn,
+)
 
 APPROVE = elicitation_cb()
 
@@ -112,6 +120,110 @@ async def test_download_pdf_relative_path_resolves_inside(
     result = await tool_fn("download_invoice_pdf")(invoice_id=1, output_path="sub/inv.pdf")
 
     assert result["path"] == str(tmp_path / "sub" / "inv.pdf")
+
+
+# -- payments -------------------------------------------------------------------
+
+
+async def test_list_payments_summaries() -> None:
+    result = await tool_fn("list_payments")()
+
+    (payment,) = result["payments"]
+    assert payment["price"] == "123.0"
+    assert payment["invoice_id"] == 1
+    assert "invoices" not in payment  # not embedded unless asked for
+    assert result["has_more"] is False
+
+
+async def test_list_payments_include_invoices_param() -> None:
+    await tool_fn("list_payments")(include_invoices=True)
+
+    assert last_request_params("/banking/payments.json")["include"] == "invoices"
+
+
+async def test_create_payment_approved_and_wrapped() -> None:
+    result = await call_tool(
+        "create_payment",
+        {"price": 500.0, "invoice_id": 1, "name": "Przelew mBank"},
+        elicitation_callback=APPROVE,
+    )
+
+    assert not result.isError
+    assert result.structuredContent["id"] == 77
+    body = json.loads(next(r for r in RECORDED if r.url.path == "/banking/payments.json").content)
+    assert body["banking_payment"]["price"] == 500.0
+    assert body["banking_payment"]["kind"] == "api"
+
+
+async def test_create_payment_dialog_shows_amount_and_invoice() -> None:
+    captured: list[str] = []
+
+    async def capturing_cb(context, params):  # noqa: ANN001, ANN202
+        from mcp.types import ElicitResult
+
+        captured.append(params.message)
+        return ElicitResult(action="accept", content={"confirm": True})
+
+    await call_tool(
+        "create_payment", {"price": 500.0, "invoice_id": 1}, elicitation_callback=capturing_cb
+    )
+
+    assert "500.0" in captured[0]
+    assert "invoice 1" in captured[0]
+
+
+async def test_delete_payment_fetches_details_for_dialog() -> None:
+    captured: list[str] = []
+
+    async def capturing_cb(context, params):  # noqa: ANN001, ANN202
+        from mcp.types import ElicitResult
+
+        captured.append(params.message)
+        return ElicitResult(action="accept", content={"confirm": True})
+
+    result = await call_tool(
+        "delete_payment", {"payment_id": 77}, elicitation_callback=capturing_cb
+    )
+
+    assert not result.isError
+    assert result.structuredContent == {"deleted_payment_id": 77}
+    assert "'Payment 001'" in captured[0]
+    assert "123.0" in captured[0]
+
+
+async def test_send_invoice_by_email_approved() -> None:
+    result = await call_tool(
+        "send_invoice_by_email",
+        {"invoice_id": 1, "email_to": ["client@acme.pl"]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert not result.isError
+    assert result.structuredContent["sent_to"] == ["client@acme.pl"]
+    params = last_request_params("/invoices/1/send_by_email.json")
+    assert params["email_to"] == "client@acme.pl"
+    assert params["email_pdf"] == "true"
+
+
+async def test_send_invoice_by_email_declined_sends_nothing() -> None:
+    result = await call_tool(
+        "send_invoice_by_email",
+        {"invoice_id": 1},
+        elicitation_callback=elicitation_cb(action="decline"),
+    )
+
+    assert result.isError
+    assert not any(r.url.path == "/invoices/1/send_by_email.json" for r in RECORDED)
+
+
+async def test_send_invoice_by_email_rejects_six_recipients_via_schema() -> None:
+    result = await call_tool(
+        "send_invoice_by_email",
+        {"invoice_id": 1, "email_to": [f"user{i}@acme.pl" for i in range(6)]},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError  # max_length=5 enforced in the tool schema
 
 
 # -- write tools go through the elicitation approval gate ---------------------
@@ -251,6 +363,9 @@ async def test_write_roundtrip_all_tools_approved() -> None:
             "update_product",
             {"product_id": 9, "fields": {"price_net": "99.0", "price_gross": "121.77"}},
         ),
+        ("create_payment", {"price": 500.0, "invoice_id": 1}),
+        ("delete_payment", {"payment_id": 77}),
+        ("send_invoice_by_email", {"invoice_id": 1, "email_to": ["client@acme.pl"]}),
     ]
     for name, args in cases:
         result = await call_tool(name, args, elicitation_callback=APPROVE)

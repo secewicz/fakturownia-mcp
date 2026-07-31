@@ -29,6 +29,15 @@ CLIENT = {
     "panel_url": "https://x.fakturownia.pl/panel/abc",
 }
 PRODUCT = {"id": 9, "name": "Abonament", "price_net": "89.0", "tax": "23"}
+PAYMENT = {
+    "id": 77,
+    "name": "Payment 001",
+    "price": "123.0",
+    "currency": "PLN",
+    "paid": True,
+    "kind": "api",
+    "invoice_id": 1,
+}
 
 RECORDED: list[httpx.Request] = []
 
@@ -48,6 +57,11 @@ def _handler(request: httpx.Request) -> httpx.Response:
         ("POST", "/clients.json"): CLIENT,
         ("PUT", "/clients/5.json"): CLIENT,
         ("DELETE", "/clients/5.json"): {},
+        ("POST", "/invoices/1/send_by_email.json"): {"code": "success"},
+        ("GET", "/banking/payments.json"): [PAYMENT],
+        ("GET", "/banking/payment/77.json"): PAYMENT,
+        ("POST", "/banking/payments.json"): PAYMENT,
+        ("DELETE", "/banking/payments/77.json"): {},
         ("GET", "/products.json"): [PRODUCT],
         ("GET", "/products/9.json"): PRODUCT,
         ("POST", "/products.json"): PRODUCT,

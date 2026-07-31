@@ -17,6 +17,7 @@ from fakturownia_mcp.errors import api_call
 from fakturownia_mcp.schemas import (
     ConfirmFlag,
     DateStr,
+    EmailList,
     InvoiceNumber,
     InvoiceStatus,
     InvoiceUpdateFields,
@@ -25,6 +26,7 @@ from fakturownia_mcp.schemas import (
     PeriodStr,
     PerPage,
     PositionInput,
+    PrintOption,
     full_record,
 )
 
@@ -255,6 +257,63 @@ def register(mcp: FastMCP) -> None:
         client = await config.get_client()
         await api_call(client.change_invoice_status(invoice_id, status))
         return {"invoice_id": invoice_id, "status": status}
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Send invoice by e-mail",
+            readOnlyHint=False,
+            destructiveHint=False,
+            idempotentHint=False,
+            openWorldHint=True,
+        )
+    )
+    async def send_invoice_by_email(
+        invoice_id: int,
+        email_to: Annotated[
+            EmailList | None,
+            Field(description="Recipients; omit to send to the invoice's buyer e-mail"),
+        ] = None,
+        email_cc: Annotated[EmailList | None, Field(description="CC recipients")] = None,
+        print_option: Annotated[
+            PrintOption | None,
+            Field(description="Document variant to send; server default is the original"),
+        ] = None,
+        confirm: ConfirmFlag = False,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
+        """E-mail an invoice (with its PDF attached) to the buyer or given recipients.
+
+        Call this when the user wants an invoice delivered to their client
+        ("wyślij fakturę X mailem"). Omitting email_to sends to the buyer's
+        e-mail stored on the invoice — check it first with get_invoice and
+        confirm with the user, because the message goes out immediately and
+        cannot be recalled. The user approves the recipients in a dialog first;
+        sending again produces a second e-mail, so never retry after success or
+        a declined approval. To only produce the file locally use
+        download_invoice_pdf instead.
+
+        Returns {"invoice_id", "sent_to"} after the API accepts the send.
+        Example: send_invoice_by_email(invoice_id=123, email_to=["client@acme.pl"]).
+        """
+        recipients = ", ".join(email_to) if email_to else "the buyer e-mail on the invoice"
+        cc = f" (cc: {', '.join(email_cc)})" if email_cc else ""
+        await require_approval(
+            ctx,
+            f"SEND invoice {invoice_id} by e-mail to {recipients}{cc} — goes out immediately",
+            confirm=confirm,
+        )
+        client = await config.get_client()
+        await api_call(
+            client.send_invoice_by_email(
+                invoice_id,
+                email_to=email_to,
+                email_cc=email_cc,
+                email_pdf=True,
+                print_option=print_option,
+            )
+        )
+        return {"invoice_id": invoice_id, "sent_to": email_to or "buyer_email"}
 
     @mcp.tool(
         annotations=ToolAnnotations(

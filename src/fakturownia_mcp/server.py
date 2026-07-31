@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
-from fakturownia_mcp import config
+from fakturownia_mcp import config, prompts
 from fakturownia_mcp.tools import register_all
 
 INSTRUCTIONS = """\
@@ -22,6 +22,13 @@ Workflow: list_* tools return compact summaries (fetch details with get_*).
 Before creating a client or invoicing by buyer_* fields, search with
 list_clients (by tax_no/name) and prefer create_invoice(client_id=...) to
 avoid duplicate contractors. Expenses are invoices with income=False.
+
+Payments vs status: create_payment records actual money against invoices
+(preferred when the user says a transfer arrived); change_invoice_status
+(status='paid') only flips the flag without a payment record.
+send_invoice_by_email delivers the document to an external mailbox
+immediately — verify recipients with the user before calling it and never
+resend after success.
 
 Writes (create_*, update_*, delete_client, change_invoice_status) ask the
 user for approval via an elicitation dialog before touching the API. On
@@ -44,6 +51,7 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
 
 mcp = FastMCP("fakturownia", instructions=INSTRUCTIONS, lifespan=_lifespan)
 register_all(mcp)
+prompts.register(mcp)
 
 
 def main() -> None:

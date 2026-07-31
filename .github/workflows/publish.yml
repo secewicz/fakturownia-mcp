@@ -34,15 +34,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - name: Check alias version matches
+      - name: Check alias and bundle versions match
         run: |
           python3 - <<'EOF'
-          import re, tomllib
+          import json, re, tomllib
           main = re.search(r'__version__ = "(.+)"', open("src/fakturownia_mcp/__init__.py").read()).group(1)
           with open("aliases/invoiceocean-mcp/pyproject.toml", "rb") as f:
               alias = tomllib.load(f)["project"]
           assert alias["version"] == main, f"alias {alias['version']} != server {main}"
           assert f"fakturownia-mcp=={main}" in alias["dependencies"], alias["dependencies"]
+          manifest = json.load(open("mcpb/manifest.json"))
+          assert manifest["version"] == main, f"mcpb manifest {manifest['version']} != server {main}"
+          with open("mcpb/pyproject.toml", "rb") as f:
+              bundle = tomllib.load(f)["project"]
+          assert bundle["version"] == main, f"mcpb pyproject {bundle['version']} != server {main}"
+          assert f"fakturownia-mcp=={main}" in bundle["dependencies"], bundle["dependencies"]
           print(f"versions in sync: {main}")
           EOF
       - run: uv build
@@ -50,3 +56,21 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  bundle:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack .mcpb bundle
+        run: npx --yes @anthropic-ai/mcpb pack mcpb "fakturownia-mcp-${GITHUB_REF_NAME#v}.mcpb"
+      - name: Create GitHub release with the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "See CHANGELOG.md. The .mcpb file installs the server in Claude Desktop with one click (double-click after downloading; requires uv)." \
+            "fakturownia-mcp-${GITHUB_REF_NAME#v}.mcpb"

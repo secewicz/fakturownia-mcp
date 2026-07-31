@@ -66,7 +66,16 @@ claude mcp add fakturownia \
   -- uvx fakturownia-mcp
 ```
 
-### Claude Desktop (`claude_desktop_config.json`)
+### Claude Desktop — one-click install (.mcpb)
+
+Download `fakturownia-mcp-X.Y.Z.mcpb` from the
+[latest GitHub release](https://github.com/KrzysztofMarmol/fakturownia-mcp/releases/latest),
+double-click it (or drag it onto Claude Desktop) and fill in the domain and
+API token in the install dialog — the token field is stored securely and the
+PDF download directory is configurable there too. Requires
+[uv](https://docs.astral.sh/uv/) on the machine.
+
+### Claude Desktop — manual (`claude_desktop_config.json`)
 
 ```json
 {
@@ -111,6 +120,10 @@ npx @modelcontextprotocol/inspector \
 | `update_invoice` 🔒 | Partial update, e.g. `{"buyer_email": "x@y.pl"}` or `{"approval_status": "verified"}` |
 | `change_invoice_status` 🔒 | `issued` / `sent` / `paid` / `partial` / `rejected` |
 | `download_invoice_pdf` | Saves the PDF to disk (default `~/Downloads/faktura-<number>.pdf`) |
+| `send_invoice_by_email` 🔒 | E-mails the invoice PDF to the buyer or given recipients (max 5, plus CC); sends immediately |
+| `list_payments` | Banking payments with amounts; `include_invoices=true` embeds the settled invoices |
+| `create_payment` 🔒 | Record incoming money and settle one invoice (`invoice_id`) or several (`invoice_ids`, in order) |
+| `delete_payment` 🔒 | Remove a mistakenly recorded payment (irreversible) |
 | `list_clients` / `get_client` | Search contractors by name, tax id (NIP), e-mail |
 | `create_client` 🔒 / `update_client` 🔒 / `delete_client` 🔒 | Contractor management |
 | `list_products` / `get_product` / `create_product` 🔒 / `update_product` 🔒 | Product management |
@@ -123,15 +136,21 @@ Example prompts once connected:
 - *"List my unpaid invoices from this month"*
 - *"Show my expenses from June"* → `list_invoices(income=false, ...)`
 - *"Issue a VAT invoice for ACME for 'Consulting', 1000 zł net"* → approval dialog → created
-- *"Mark invoice 52572/07/2026 as paid"*
+- *"A 500 zł transfer arrived for invoice 12/2026"* → `create_payment` (records money, settles the invoice)
+- *"E-mail invoice 12/2026 to the client"* → approval dialog with recipients → sent
 - *"Download the PDF of my latest invoice"*
+
+The server also ships two reusable **MCP prompts** (slash-command style in
+clients that support them): `monthly_summary` (revenue/costs/unpaid/payments
+for a month) and `chase_unpaid` (overdue invoices + drafted reminders,
+nothing sent without approval).
 
 ## Approval gate for writes (🔒)
 
 Every mutating tool asks for confirmation via **MCP elicitation** before
-touching the API — clients with elicitation support (Claude Code, Claude
-Desktop, MCP Inspector) show a native approval dialog describing the exact
-operation (e.g. *"create vat invoice for ACME with positions: Consulting"*).
+touching the API — clients with elicitation support (Claude Code, MCP
+Inspector) show a native approval dialog describing the exact operation
+(e.g. *"create vat invoice for ACME with positions: Consulting"*).
 Declining aborts the call before any request is sent.
 
 Clients without elicitation support (e.g. Claude Desktop) fall back to

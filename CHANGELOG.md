@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.0] - 2026-07-31
+
+### Added
+- Payment tools: `list_payments` (with optional embedded invoices),
+  `create_payment` (settle one invoice via `invoice_id` or several via
+  `invoice_ids`) and `delete_payment` — recording actual money is now
+  distinct from `change_invoice_status(status='paid')`.
+- `send_invoice_by_email` 🔒: e-mails the invoice PDF to the buyer or up to
+  5 explicit recipients (plus CC), with the document variant selectable;
+  marked `openWorldHint` (reaches an external mailbox) and always gated by
+  approval.
+- Two MCP prompts: `monthly_summary` and `chase_unpaid`.
+- `.mcpb` bundle attached to every GitHub release — one-click install in
+  Claude Desktop (uv-managed runtime, API token stored as a secret field).
+
+### Changed
+- Requires `fakturownia-client>=0.2.0` (payments + send_by_email support).
+
 ## [0.2.0] - 2026-07-30
 
 ### Added

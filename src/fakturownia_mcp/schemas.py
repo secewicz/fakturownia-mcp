@@ -59,6 +59,17 @@ InvoiceNumber = Annotated[
     Field(description="Full or partial invoice number as printed, e.g. '15/2025' or 'P1/07/2026'"),
 ]
 
+EmailList = Annotated[
+    list[str],
+    Field(
+        min_length=1,
+        max_length=5,
+        description="E-mail addresses (the API caps recipients at 5)",
+    ),
+]
+
+PrintOption = Literal["original", "copy", "original_and_copy", "duplicate"]
+
 InvoiceUpdateFields = Annotated[
     dict[str, Any],
     Field(

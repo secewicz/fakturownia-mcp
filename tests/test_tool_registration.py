@@ -18,6 +18,10 @@ EXPECTED_TOOLS = {
     "get_product",
     "create_product",
     "update_product",
+    "list_payments",
+    "create_payment",
+    "delete_payment",
+    "send_invoice_by_email",
 }
 
 
@@ -38,9 +42,11 @@ async def test_tool_annotations() -> None:
     for name in read_only:
         assert tools[name].annotations.readOnlyHint is True, name
     assert tools["delete_client"].annotations.destructiveHint is True
+    assert tools["delete_payment"].annotations.destructiveHint is True
     assert tools["download_invoice_pdf"].annotations.readOnlyHint is False  # writes a file
     for name in EXPECTED_TOOLS:
-        assert tools[name].annotations.openWorldHint is False, name
+        expected_open_world = name == "send_invoice_by_email"  # e-mails an external mailbox
+        assert tools[name].annotations.openWorldHint is expected_open_world, name
         assert tools[name].annotations.title, name
 
 
@@ -52,6 +58,25 @@ async def test_docstrings_meet_guidance_bar() -> None:
         assert tool.description, tool.name
         sentences = [s for s in tool.description.split(".") if s.strip()]
         assert len(sentences) >= 3, f"{tool.name} description too terse"
+
+
+async def test_prompts_registered() -> None:
+    async with client_session(mcp._mcp_server) as session:
+        prompts = (await session.list_prompts()).prompts
+
+    names = {p.name for p in prompts}
+    assert names == {"monthly_summary", "chase_unpaid"}
+    for prompt in prompts:
+        assert prompt.description, prompt.name
+
+
+async def test_monthly_summary_prompt_renders() -> None:
+    async with client_session(mcp._mcp_server) as session:
+        result = await session.get_prompt("monthly_summary", {"month": "2026-06"})
+
+    text = result.messages[0].content.text
+    assert "2026-06" in text
+    assert "list_payments" in text
 
 
 async def test_list_invoices_roundtrip() -> None:

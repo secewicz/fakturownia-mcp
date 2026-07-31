@@ -35,8 +35,12 @@ known future task). `server.py` builds the `FastMCP` instance with agent-facing
   can inject via `set_client()` without the lifespan killing their instance.
   Every env var works with both `FAKTUROWNIA_` and `INVOICEOCEAN_` prefixes
   (`_env()` helper; `FAKTUROWNIA_` wins).
-- `tools/{invoices,clients,products}.py` — each exposes `register(mcp)`;
-  called once from `server.py` via `tools.register_all`.
+- `tools/{invoices,clients,payments,products}.py` — each exposes
+  `register(mcp)`; called once from `server.py` via `tools.register_all`.
+  `prompts.py` registers the MCP prompts the same way.
+- `mcpb/` — source of the `.mcpb` one-click bundle (manifest + dependency
+  pyproject + entry shim); versions there must match `__version__` and the
+  release publishes it as a GitHub release asset (`bundle` job).
 - `approval.py` — elicitation gate for every mutating tool. It checks the
   client's declared elicitation capability first (clear error when absent),
   and the dialog message must show the actual values being written
