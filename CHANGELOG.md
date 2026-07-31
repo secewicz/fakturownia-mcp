@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.1] - 2026-07-31
+
+### Fixed
+- Requires `fakturownia-client>=0.2.1`, which fixes `get_payment` (the API's
+  documented singular path 404s on the live service) — this repairs the
+  `delete_payment` approval dialog — and accepts full timestamps in
+  `Payment.paid_date`.
+
 ## [0.3.0] - 2026-07-31
 
 ### Added

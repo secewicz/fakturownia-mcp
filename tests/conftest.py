@@ -59,7 +59,7 @@ def _handler(request: httpx.Request) -> httpx.Response:
         ("DELETE", "/clients/5.json"): {},
         ("POST", "/invoices/1/send_by_email.json"): {"code": "success"},
         ("GET", "/banking/payments.json"): [PAYMENT],
-        ("GET", "/banking/payment/77.json"): PAYMENT,
+        ("GET", "/banking/payments/77.json"): PAYMENT,
         ("POST", "/banking/payments.json"): PAYMENT,
         ("DELETE", "/banking/payments/77.json"): {},
         ("GET", "/products.json"): [PRODUCT],

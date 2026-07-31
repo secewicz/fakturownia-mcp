@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing: invoices, clients, products, payments.",
   "author": {
     "name": "Krzysztof Marmol",
