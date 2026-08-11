@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [0.3.5] - 2026-08-11
+
+### Fixed
+- `create_invoice` can now issue VAT invoices for private persons without NIP
+  by passing `buyer_company=false` with buyer first/last name and address fields.
+- `create_client` can now create private-person clients with `company=false`,
+  `first_name` and `last_name` without requiring `tax_no`.
+
 ## [0.3.4] - 2026-07-31
 
 ### Fixed

@@ -137,6 +137,28 @@ def register(mcp: FastMCP) -> None:
         ] = None,
         buyer_tax_no: Annotated[str | None, Field(description="Buyer tax id (NIP)")] = None,
         buyer_email: Annotated[str | None, Field(description="Buyer e-mail")] = None,
+        buyer_company: Annotated[
+            bool | None,
+            Field(description="True for a company, False for a private person without NIP"),
+        ] = None,
+        buyer_first_name: Annotated[
+            str | None,
+            Field(description="Buyer first name; use with buyer_company=False"),
+        ] = None,
+        buyer_last_name: Annotated[
+            str | None,
+            Field(description="Buyer last name; use with buyer_company=False"),
+        ] = None,
+        buyer_street: Annotated[
+            str | None, Field(description="Buyer street and building number")
+        ] = None,
+        buyer_post_code: Annotated[
+            str | None, Field(description="Buyer postal code, e.g. 30-001")
+        ] = None,
+        buyer_city: Annotated[str | None, Field(description="Buyer city")] = None,
+        buyer_country: Annotated[
+            str | None, Field(description="Buyer country code, e.g. PL")
+        ] = None,
         client_id: Annotated[
             int | None, Field(description="Existing client id to bill (fills buyer data)")
         ] = None,
@@ -166,7 +188,9 @@ def register(mcp: FastMCP) -> None:
         buyer_name is required. Prefer billing an existing contractor: find them
         with list_clients(tax_no=...) and pass client_id, which fills the buyer
         data and avoids duplicate contractors; use buyer_* fields only for
-        one-off buyers. Each position needs a name plus price_net or
+        one-off buyers. For a private person without NIP, pass
+        buyer_company=False plus buyer_first_name and buyer_last_name; do not put
+        buyer data inside positions. Each position needs a name plus price_net or
         total_price_gross; issue_date defaults to today on the server side. Do
         not use this to modify an existing invoice — that is update_invoice /
         change_invoice_status.
@@ -197,6 +221,13 @@ def register(mcp: FastMCP) -> None:
             "buyer_name": buyer_name,
             "buyer_tax_no": buyer_tax_no,
             "buyer_email": buyer_email,
+            "buyer_company": buyer_company,
+            "buyer_first_name": buyer_first_name,
+            "buyer_last_name": buyer_last_name,
+            "buyer_street": buyer_street,
+            "buyer_post_code": buyer_post_code,
+            "buyer_city": buyer_city,
+            "buyer_country": buyer_country,
             "client_id": client_id,
             "issue_date": issue_date,
             "sell_date": sell_date,

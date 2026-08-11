@@ -300,6 +300,85 @@ async def test_create_invoice_executes_when_approved() -> None:
     assert "token" not in result.structuredContent  # trimmed summary, not a full dump
 
 
+async def test_create_invoice_private_person_without_tax_no() -> None:
+    result = await call_tool(
+        "create_invoice",
+        {
+            "kind": "vat",
+            "buyer_name": "Paweł Sajdak",
+            "buyer_company": False,
+            "buyer_first_name": "Paweł",
+            "buyer_last_name": "Sajdak",
+            "buyer_street": "Rozdziele 219",
+            "buyer_post_code": "32-731",
+            "buyer_city": "Rozdziele",
+            "buyer_country": "PL",
+            "positions": [{"name": "Oprawa dekoratorska", "total_price_gross": 7000.0}],
+        },
+        elicitation_callback=APPROVE,
+    )
+
+    assert not result.isError
+    body = json.loads(next(r for r in RECORDED if r.url.path == "/invoices.json").content)
+    invoice = body["invoice"]
+    assert invoice["buyer_company"] is False
+    assert invoice["buyer_first_name"] == "Paweł"
+    assert invoice["buyer_last_name"] == "Sajdak"
+    assert invoice["buyer_street"] == "Rozdziele 219"
+    assert invoice["positions"][0]["name"] == "Oprawa dekoratorska"
+    assert "buyer_tax_no" not in invoice
+
+
+async def test_create_client_private_person_without_name_or_tax_no() -> None:
+    result = await call_tool(
+        "create_client",
+        {
+            "company": False,
+            "first_name": "Paweł",
+            "last_name": "Sajdak",
+            "street": "Rozdziele 219",
+            "post_code": "32-731",
+            "city": "Rozdziele",
+            "country": "PL",
+        },
+        elicitation_callback=APPROVE,
+    )
+
+    assert not result.isError
+    body = json.loads(next(r for r in RECORDED if r.url.path == "/clients.json").content)
+    client = body["client"]
+    assert client["company"] is False
+    assert client["first_name"] == "Paweł"
+    assert client["last_name"] == "Sajdak"
+    assert client["street"] == "Rozdziele 219"
+    assert "name" not in client
+    assert "tax_no" not in client
+
+
+async def test_create_client_company_requires_name_before_dialog() -> None:
+    result = await call_tool(
+        "create_client",
+        {"company": True},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "name is required" in result_text(result)
+    assert not RECORDED
+
+
+async def test_create_client_private_person_requires_name_or_full_person_name() -> None:
+    result = await call_tool(
+        "create_client",
+        {"company": False, "first_name": "Paweł"},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "private-person client" in result_text(result)
+    assert not RECORDED
+
+
 async def test_create_invoice_declined_is_an_error() -> None:
     result = await call_tool(
         "create_invoice",

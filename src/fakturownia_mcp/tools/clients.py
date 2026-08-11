@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from fakturownia_client.models import Client
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -91,7 +92,13 @@ def register(mcp: FastMCP) -> None:
         )
     )
     async def create_client(
-        name: Annotated[str, Field(min_length=1, description="Client name")],
+        name: Annotated[
+            str | None,
+            Field(
+                min_length=1,
+                description="Client/company display name; required for companies",
+            ),
+        ] = None,
         tax_no: TaxNo | None = None,
         email: Annotated[str | None, Field(description="E-mail address")] = None,
         phone: Annotated[str | None, Field(description="Phone number")] = None,
@@ -102,6 +109,14 @@ def register(mcp: FastMCP) -> None:
         company: Annotated[
             bool, Field(description="True for a company, False for a person")
         ] = True,
+        first_name: Annotated[
+            str | None,
+            Field(description="First name for company=False private-person clients"),
+        ] = None,
+        last_name: Annotated[
+            str | None,
+            Field(description="Last name for company=False private-person clients"),
+        ] = None,
         confirm: ConfirmFlag = False,
         *,
         ctx: Context,  # type: ignore[type-arg]
@@ -111,11 +126,20 @@ def register(mcp: FastMCP) -> None:
         First check with list_clients(tax_no=... or name=...) that the contractor
         does not already exist — duplicates pollute the account. The user approves
         the creation (with the values) in a dialog before anything is written.
+        For a private person without NIP, pass company=False plus first_name and
+        last_name; tax_no is not required in that case.
 
         Returns a summary with the new client's id, which create_invoice and the
         other client tools accept. Example: create_client(name="ACME Sp. z o.o.",
         tax_no="1234567890", email="biuro@acme.pl").
         """
+        if company and not name:
+            raise ToolError("Client name is required when company=True.")
+        if not company and not (name or (first_name and last_name)):
+            raise ToolError(
+                "For a private-person client, pass company=False plus first_name "
+                "and last_name, or provide name explicitly."
+            )
         payload: dict[str, Any] = {
             "name": name,
             "tax_no": tax_no,
@@ -126,6 +150,8 @@ def register(mcp: FastMCP) -> None:
             "post_code": post_code,
             "country": country,
             "company": company,
+            "first_name": first_name,
+            "last_name": last_name,
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         await require_approval(ctx, f"create client: {format_fields(payload)}", confirm=confirm)
