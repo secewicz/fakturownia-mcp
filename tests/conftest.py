@@ -46,10 +46,23 @@ READ_ONLY_RESOURCES = {
     "categories": {"id": 105, "name": "Services"},
     "departments": {"id": 106, "name": "Sales"},
     "issuers": {"id": 107, "name": "Jane Doe"},
-    "bank_accounts": {"id": 108, "name": "Primary PLN", "account_number": "PL001"},
+    "bank_accounts": {
+        "id": 108,
+        "name": "Primary PLN",
+        "account_number": "PL001",
+        "currency": "PLN",
+    },
     "webhooks": {"id": 109, "name": "ERP sync", "token": "redact-me"},
 }
-WAREHOUSE_ACTION = {"id": 110, "kind": "income", "warehouse_id": 103, "product_id": 9}
+WAREHOUSE_ACTION = {
+    "id": 110,
+    "kind": "income",
+    "warehouse_id": 103,
+    "product_id": 9,
+    "warehouse_document_id": 104,
+    "quantity": "5.0",
+    "date": "2026-09-15",
+}
 
 RECORDED: list[httpx.Request] = []
 

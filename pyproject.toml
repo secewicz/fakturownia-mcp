@@ -26,13 +26,13 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.9,<2.0",
-    "fakturownia-client>=0.2.1",
+    "fakturownia-client>=0.3.0",
 ]
 
 [project.urls]
-Repository = "https://github.com/KrzysztofMarmol/fakturownia-mcp"
-Issues = "https://github.com/KrzysztofMarmol/fakturownia-mcp/issues"
-Changelog = "https://github.com/KrzysztofMarmol/fakturownia-mcp/blob/main/CHANGELOG.md"
+Repository = "https://github.com/secewicz/fakturownia-mcp"
+Issues = "https://github.com/secewicz/fakturownia-mcp/issues"
+Changelog = "https://github.com/secewicz/fakturownia-mcp/blob/main/CHANGELOG.md"
 
 [project.scripts]
 fakturownia-mcp = "fakturownia_mcp.server:main"
@@ -60,10 +60,10 @@ fakturownia_mcp = ["py.typed"]
 version = { attr = "fakturownia_mcp.__version__" }
 
 [tool.uv.sources]
-# Co-developed sibling checkout; switch to the git source below for CI or
-# machines without ../fakturownia-client:
-# fakturownia-client = { git = "https://github.com/KrzysztofMarmol/fakturownia-client" }
-fakturownia-client = { path = "../fakturownia-client", editable = true }
+# Exact reviewed client commit. Package metadata still requires the corresponding
+# released version, while uv-based development and CI can use this commit until
+# fakturownia-client 0.3.0 is published.
+fakturownia-client = { git = "https://github.com/secewicz/fakturownia-client", rev = "f41a0cff8b71a8da33894c94b8c6afe6c628f4e0" }
 
 [tool.ruff]
 line-length = 100

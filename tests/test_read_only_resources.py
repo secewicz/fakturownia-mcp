@@ -22,6 +22,8 @@ async def test_generic_read_only_list_and_get_tools() -> None:
         assert listed["has_more"] is True
         assert listed[plural][0]["id"] == record_id
         assert "token" not in listed[plural][0]
+        if plural == "bank_accounts":
+            assert listed[plural][0]["currency"] == "PLN"
         assert fetched["id"] == record_id
         assert "token" not in fetched
         assert last_request_params(f"/{plural}.json") == {"page": "2", "per_page": "1"}
@@ -44,6 +46,9 @@ async def test_list_warehouse_actions_forwards_all_supported_filters() -> None:
     assert result["page"] == 3
     assert result["has_more"] is True
     assert result["warehouse_actions"][0]["kind"] == "income"
+    assert result["warehouse_actions"][0]["quantity"] == "5.0"
+    assert result["warehouse_actions"][0]["warehouse_document_id"] == 104
+    assert result["warehouse_actions"][0]["date"] == "2026-09-15"
     assert last_request_params("/warehouse_actions.json") == {
         "warehouse_id": "103",
         "kind": "income",

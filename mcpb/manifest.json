@@ -2,13 +2,13 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing and account data.",
   "author": {
     "name": "Krzysztof Marmol",
     "email": "krzysztof.marmol@gmail.com"
   },
-  "homepage": "https://github.com/KrzysztofMarmol/fakturownia-mcp",
+  "homepage": "https://github.com/secewicz/fakturownia-mcp",
   "server": {
     "type": "uv",
     "entry_point": "src/server.py",

@@ -25,8 +25,12 @@ def _summary(record: ApiRecord) -> dict[str, Any]:
         "kind",
         "code",
         "warehouse_id",
+        "warehouse_document_id",
         "product_id",
+        "quantity",
+        "date",
         "account_number",
+        "currency",
         "event_type",
     )
     return {key: data[key] for key in fields if key in data}

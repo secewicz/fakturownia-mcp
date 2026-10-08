@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-08
+
 ### Added
 - Nineteen read-only tools for recurring definitions, price lists, warehouses,
   warehouse documents and actions, categories, departments, issuers, bank
