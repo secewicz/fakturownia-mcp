@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Release artifacts
 
 on:
   push:
@@ -7,71 +7,80 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      # sibling checkout: [tool.uv.sources] points at ../fakturownia-client
       - uses: actions/checkout@v4
-        with:
-          path: fakturownia-mcp
-      - uses: actions/checkout@v4
-        with:
-          repository: KrzysztofMarmol/fakturownia-client
-          path: fakturownia-client
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --extra dev
-        working-directory: fakturownia-mcp
+      - run: uv sync --locked --extra dev
       - run: uv run ruff check .
-        working-directory: fakturownia-mcp
       - run: uv run ruff format --check .
-        working-directory: fakturownia-mcp
       - run: uv run mypy
-        working-directory: fakturownia-mcp
       - run: uv run pytest
-        working-directory: fakturownia-mcp
 
-  publish:
+  build:
     needs: test
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
-      id-token: write  # PyPI trusted publishing (OIDC), no API token involved
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - name: Check alias and bundle versions match
+      - name: Check tag, release dependencies, and versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           python3 - <<'EOF'
-          import json, re, tomllib
+          import json, os, re, tomllib
+
           main = re.search(r'__version__ = "(.+)"', open("src/fakturownia_mcp/__init__.py").read()).group(1)
-          with open("aliases/invoiceocean-mcp/pyproject.toml", "rb") as f:
-              alias = tomllib.load(f)["project"]
+          assert os.environ["RELEASE_TAG"] == f"v{main}", (
+              f"tag {os.environ['RELEASE_TAG']} != package v{main}"
+          )
+          release_ref = f"fakturownia-mcp @ git+https://github.com/secewicz/fakturownia-mcp.git@v{main}"
+          with open("aliases/invoiceocean-mcp/pyproject.toml", "rb") as file:
+              alias = tomllib.load(file)["project"]
           assert alias["version"] == main, f"alias {alias['version']} != server {main}"
-          assert f"fakturownia-mcp=={main}" in alias["dependencies"], alias["dependencies"]
+          assert release_ref in alias["dependencies"], alias["dependencies"]
+
           manifest = json.load(open("mcpb/manifest.json"))
           assert manifest["version"] == main, f"mcpb manifest {manifest['version']} != server {main}"
-          with open("mcpb/pyproject.toml", "rb") as f:
-              bundle = tomllib.load(f)["project"]
+          with open("mcpb/pyproject.toml", "rb") as file:
+              bundle = tomllib.load(file)["project"]
           assert bundle["version"] == main, f"mcpb pyproject {bundle['version']} != server {main}"
-          assert f"fakturownia-mcp=={main}" in bundle["dependencies"], bundle["dependencies"]
-          print(f"versions in sync: {main}")
+          assert release_ref in bundle["dependencies"], bundle["dependencies"]
+          print(f"tag, versions, and release dependencies in sync: {main}")
           EOF
       - run: uv build
       - run: uv build aliases/invoiceocean-mcp -o dist
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Pack .mcpb bundle with audited CLI version
+        run: npx --yes @anthropic-ai/mcpb@2.1.2 pack mcpb "dist/fakturownia-mcp-${GITHUB_REF_NAME#v}.mcpb"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-artifacts
+          path: dist/*
+          if-no-files-found: error
 
-  bundle:
-    needs: publish
+  release:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - name: Pack .mcpb bundle
-        run: npx --yes @anthropic-ai/mcpb pack mcpb "fakturownia-mcp-${GITHUB_REF_NAME#v}.mcpb"
-      - name: Create GitHub release with the bundle
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-artifacts
+          path: dist
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --notes "See CHANGELOG.md. The .mcpb file installs the server in Claude Desktop with one click (double-click after downloading; requires uv)." \
-            "fakturownia-mcp-${GITHUB_REF_NAME#v}.mcpb"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "See CHANGELOG.md. Artifacts are built from the reviewed Git tag; the .mcpb bundle requires uv." \
+              dist/*
+          fi

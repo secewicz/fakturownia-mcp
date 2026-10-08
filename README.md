@@ -1,23 +1,24 @@
 # fakturownia-mcp
 
-[![PyPI](https://img.shields.io/pypi/v/fakturownia-mcp)](https://pypi.org/project/fakturownia-mcp/)
-[![CI](https://github.com/KrzysztofMarmol/fakturownia-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/KrzysztofMarmol/fakturownia-mcp/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/fakturownia-mcp)](https://pypi.org/project/fakturownia-mcp/)
+[![Release](https://img.shields.io/github/v/release/secewicz/fakturownia-mcp)](https://github.com/secewicz/fakturownia-mcp/releases/latest)
+[![CI](https://github.com/secewicz/fakturownia-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/secewicz/fakturownia-mcp/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Unofficial** MCP (Model Context Protocol) server exposing a
 [Fakturownia](https://fakturownia.pl) (InvoiceOcean) account as tools for
-Claude and other MCP clients: invoices (list/search, create, update, status
-changes, PDF download), clients and products.
+Claude and other MCP clients: invoices, clients, products, payments, recurring
+definitions, price lists, warehouse records and stock movements, categories,
+departments, issuers, bank accounts, and webhooks.
 
 > This is a community-maintained project. It is not affiliated with, endorsed
 > by, or sponsored by Fakturownia sp. z o.o. or InvoiceOcean. "Fakturownia"
 > and "InvoiceOcean" are trademarks of their respective owner, used here only
 > to indicate compatibility. InvoiceOcean users: pass your full
 > `*.invoiceocean.com` domain as `FAKTUROWNIA_DOMAIN`, or install the
-> [`invoiceocean-mcp`](https://pypi.org/project/invoiceocean-mcp/) alias.
+> `invoiceocean-mcp` alias included in each GitHub release.
 
-Built on [`fakturownia-client`](https://pypi.org/project/fakturownia-client/) —
+Built on the reviewed [`fakturownia-client`](https://github.com/secewicz/fakturownia-client/releases) release —
 the API token is sent only in the `Authorization: Bearer` header, never in URLs.
 All tools are `async`, and every write goes through an approval gate.
 
@@ -67,7 +68,7 @@ server the bundle ships:
 claude mcp add fakturownia \
   -e FAKTUROWNIA_DOMAIN=mycompany \
   -e FAKTUROWNIA_API_TOKEN=... \
-  -- uvx fakturownia-mcp
+  -- uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
 ```
 
 Scope tip: add `--scope user` to make the server available in every project;
@@ -77,7 +78,7 @@ Desktop config below, `claude mcp add-from-claude-desktop` can import it.
 ### Claude Desktop — one-click install (.mcpb)
 
 1. Download `fakturownia-mcp-X.Y.Z.mcpb` from the
-   [latest GitHub release](https://github.com/KrzysztofMarmol/fakturownia-mcp/releases/latest).
+   [latest GitHub release](https://github.com/secewicz/fakturownia-mcp/releases/latest).
 2. Double-click the file — or open **Settings → Extensions** in Claude
    Desktop and drag the file onto the *"Drag .MCPB or .DXT files here to
    install"* area.
@@ -88,10 +89,8 @@ Desktop config below, `claude mcp add-from-claude-desktop` can import it.
 4. Under **Tool permissions** you can choose when Claude may use the tools;
    writes additionally go through this server's own approval flow.
 
-Requires [uv](https://docs.astral.sh/uv/) on the machine — the app resolves
-`fakturownia-mcp` from PyPI on first launch. Right after a new release, give
-PyPI a minute or two before installing, or the first launch may fail with
-"no version of fakturownia-mcp==X.Y.Z" (just restart the app to retry).
+Requires [uv](https://docs.astral.sh/uv/) on the machine. The bundle resolves
+the exact reviewed GitHub release tag declared in its dependency metadata.
 
 ### Claude Desktop — manual (`claude_desktop_config.json`)
 
@@ -100,7 +99,7 @@ PyPI a minute or two before installing, or the first launch may fail with
   "mcpServers": {
     "fakturownia": {
       "command": "/Users/you/.local/bin/uvx",
-      "args": ["fakturownia-mcp"],
+      "args": ["--from", "git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0", "fakturownia-mcp"],
       "env": {
         "FAKTUROWNIA_DOMAIN": "mycompany",
         "FAKTUROWNIA_API_TOKEN": "..."
@@ -115,9 +114,9 @@ PyPI a minute or two before installing, or the first launch may fail with
 The server speaks MCP over **stdio**. Any of these commands starts it:
 
 ```bash
-uvx fakturownia-mcp                  # zero-install, recommended
-pip install fakturownia-mcp && fakturownia-mcp
-python -m fakturownia_mcp            # after pip install
+uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
+uv tool install git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0
+python -m fakturownia_mcp            # after uv tool install
 ```
 
 ### MCP Inspector (interactive testing)
@@ -125,7 +124,7 @@ python -m fakturownia_mcp            # after pip install
 ```bash
 npx @modelcontextprotocol/inspector \
   -e FAKTUROWNIA_DOMAIN=... -e FAKTUROWNIA_API_TOKEN=... \
-  uvx fakturownia-mcp
+  uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
 ```
 
 ## Tools
@@ -145,6 +144,16 @@ npx @modelcontextprotocol/inspector \
 | `list_clients` / `get_client` | Search contractors by name, tax id (NIP), e-mail |
 | `create_client` 🔒 / `update_client` 🔒 / `delete_client` 🔒 | Contractor management |
 | `list_products` / `get_product` / `create_product` 🔒 / `update_product` 🔒 | Product management |
+| `list_recurrings` / `get_recurring` | Recurring invoice definitions |
+| `list_price_lists` / `get_price_list` | Configured price lists |
+| `list_warehouses` / `get_warehouse` | Warehouse records |
+| `list_warehouse_documents` / `get_warehouse_document` | Warehouse document headers and details |
+| `list_warehouse_actions` | Filter stock movements by warehouse, kind, product, date, or warehouse document |
+| `list_categories` / `get_category` | Account categories |
+| `list_departments` / `get_department` | Account departments |
+| `list_issuers` / `get_issuer` | Invoice issuers |
+| `list_bank_accounts` / `get_bank_account` | Configured bank accounts |
+| `list_webhooks` / `get_webhook` | Redacted webhook registrations |
 
 Parameters are fully typed (Pydantic) — date patterns, pagination limits and
 status enums are enforced in the tool JSON Schema before any API call.
@@ -187,8 +196,8 @@ for trusted automation.
   client config.
 - **HTTP 401 on every call** — wrong `FAKTUROWNIA_API_TOKEN` or wrong account
   subdomain in `FAKTUROWNIA_DOMAIN`.
-- **A new release doesn't show up** — `uvx` caches installs; run
-  `uvx fakturownia-mcp@latest` once (or pin `fakturownia-mcp==X.Y.Z`).
+- **A new release doesn't show up** — `uvx` caches installs; repeat the
+  GitHub-tag command with `--refresh`, keeping the exact reviewed tag.
 - **Product price update seems ignored** — Fakturownia quirk: send `price_net`
   and `price_gross` together; a lone `price_net` is ignored by the API.
 

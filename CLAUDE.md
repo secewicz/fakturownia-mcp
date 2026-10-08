@@ -4,10 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Setup requirement
 
-Development needs a **sibling checkout** of `fakturownia-client` at
-`../fakturownia-client` — `[tool.uv.sources]` wires it as an editable path
-dependency. CI also has a `test-published` job that resolves the client from
-PyPI (`uv sync --no-sources`); remember `--no-sources` on `uv run` there too.
+Development resolves the reviewed `fakturownia-client` GitHub release tag from
+`pyproject.toml`. CI also has a `test-release-tag` job that ignores uv source
+overrides (`uv sync --no-sources`) and proves package metadata is sufficient.
 
 ## Commands
 
@@ -22,7 +21,7 @@ uv build && uv build aliases/invoiceocean-mcp -o dist
 ```
 
 CI (`ci.yml`) runs the dev matrix (3.10/3.12/3.13, `--cov-fail-under=85`) plus
-the published-pair job.
+the clean release-tag dependency job.
 
 ## Architecture
 
@@ -56,7 +55,7 @@ known future task). `server.py` builds the `FastMCP` instance with agent-facing
 Tool design rules (tests in `test_tool_registration.py` enforce them):
 - tools return `dict[str, Any]` **on purpose** — no typed output models / full
   outputSchema. Full schemas would land in `tools/list` (context cost in every
-  conversation, ×19 tools) while duplicating the "Returns ..." sentences that
+  conversation, ×38 tools) while duplicating the "Returns ..." sentences that
   every docstring must contain (test-enforced). Do not "fix" this.
 - mutually exclusive params (e.g. create_payment invoice_id/invoice_ids) are
   flat optional properties + rule in descriptions + server-side check that
@@ -87,10 +86,10 @@ decline writes), `tool_fn()` (direct access to the undecorated function) and
 
 Version lives in `src/fakturownia_mcp/__init__.py` (`__version__`); the alias
 `aliases/invoiceocean-mcp/pyproject.toml` must match it exactly (version and
-`fakturownia-mcp==<version>` pin) — `publish.yml` fails otherwise. Bump both +
+matching GitHub release tag) — `publish.yml` fails otherwise. Bump both +
 `CHANGELOG.md` → green CI → `git tag vX.Y.Z && git push origin vX.Y.Z`.
-Release `fakturownia-client` first when depending on its new features, and
-bump the `fakturownia-client>=` floor accordingly.
+Create the `fakturownia-client` GitHub release first when depending on its new
+features, and update the exact client tag accordingly.
 
 ## Conventions
 

@@ -38,6 +38,31 @@ PAYMENT = {
     "kind": "api",
     "invoice_id": 1,
 }
+READ_ONLY_RESOURCES = {
+    "recurrings": {"id": 101, "name": "Monthly subscription", "token": "redact-me"},
+    "price_lists": {"id": 102, "name": "Retail"},
+    "warehouses": {"id": 103, "name": "Main warehouse"},
+    "warehouse_documents": {"id": 104, "number": "PZ/1/2026", "kind": "pz"},
+    "categories": {"id": 105, "name": "Services"},
+    "departments": {"id": 106, "name": "Sales"},
+    "issuers": {"id": 107, "name": "Jane Doe"},
+    "bank_accounts": {
+        "id": 108,
+        "name": "Primary PLN",
+        "account_number": "PL001",
+        "currency": "PLN",
+    },
+    "webhooks": {"id": 109, "name": "ERP sync", "token": "redact-me"},
+}
+WAREHOUSE_ACTION = {
+    "id": 110,
+    "kind": "income",
+    "warehouse_id": 103,
+    "product_id": 9,
+    "warehouse_document_id": 104,
+    "quantity": "5.0",
+    "date": "2026-09-15",
+}
 
 RECORDED: list[httpx.Request] = []
 
@@ -46,6 +71,14 @@ def _handler(request: httpx.Request) -> httpx.Response:
     RECORDED.append(request)
     path = request.url.path
     method = request.method
+    if method == "GET":
+        for resource, record in READ_ONLY_RESOURCES.items():
+            if path == f"/{resource}.json":
+                return httpx.Response(200, json=[record])
+            if path == f"/{resource}/{record['id']}.json":
+                return httpx.Response(200, json=record)
+        if path == "/warehouse_actions.json":
+            return httpx.Response(200, json=[WAREHOUSE_ACTION])
     routes = {
         ("GET", "/invoices.json"): [INVOICE],
         ("GET", "/invoices/1.json"): INVOICE,

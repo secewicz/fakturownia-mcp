@@ -2,13 +2,13 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.3.5",
-  "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing: invoices, clients, products, payments.",
+  "version": "0.4.0",
+  "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing and account data.",
   "author": {
     "name": "Krzysztof Marmol",
     "email": "krzysztof.marmol@gmail.com"
   },
-  "homepage": "https://github.com/KrzysztofMarmol/fakturownia-mcp",
+  "homepage": "https://github.com/secewicz/fakturownia-mcp",
   "server": {
     "type": "uv",
     "entry_point": "src/server.py",
@@ -63,7 +63,26 @@
     { "name": "list_products", "description": "List products" },
     { "name": "get_product", "description": "Full product record" },
     { "name": "create_product", "description": "Add a product (approval required)" },
-    { "name": "update_product", "description": "Update a product (approval required)" }
+    { "name": "update_product", "description": "Update a product (approval required)" },
+    { "name": "list_recurrings", "description": "List recurring invoice definitions" },
+    { "name": "get_recurring", "description": "Full recurring invoice definition" },
+    { "name": "list_price_lists", "description": "List configured price lists" },
+    { "name": "get_price_list", "description": "Full price-list record" },
+    { "name": "list_warehouses", "description": "List warehouses" },
+    { "name": "get_warehouse", "description": "Full warehouse record" },
+    { "name": "list_warehouse_documents", "description": "List warehouse documents" },
+    { "name": "get_warehouse_document", "description": "Full warehouse-document record" },
+    { "name": "list_warehouse_actions", "description": "List filtered stock movements" },
+    { "name": "list_categories", "description": "List account categories" },
+    { "name": "get_category", "description": "Full category record" },
+    { "name": "list_departments", "description": "List account departments" },
+    { "name": "get_department", "description": "Full department record" },
+    { "name": "list_issuers", "description": "List invoice issuers" },
+    { "name": "get_issuer", "description": "Full issuer record" },
+    { "name": "list_bank_accounts", "description": "List configured bank accounts" },
+    { "name": "get_bank_account", "description": "Full bank-account record" },
+    { "name": "list_webhooks", "description": "List webhook registrations" },
+    { "name": "get_webhook", "description": "Full redacted webhook record" }
   ],
   "prompts": [
     {
