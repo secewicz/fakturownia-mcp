@@ -13,6 +13,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
   accounts, and webhooks. Every list is paginated and returns `page` plus
   `has_more`; full records redact secret and public-link fields.
 
+### Changed
+- Resolve the expanded client and distributable aliases from exact reviewed
+  GitHub release tags. The fork does not rely on upstream-owned PyPI project
+  publishing rights.
+
 ## [0.3.5] - 2026-08-11
 
 ### Fixed

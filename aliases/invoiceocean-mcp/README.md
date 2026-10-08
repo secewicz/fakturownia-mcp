@@ -11,7 +11,7 @@ for Claude and other MCP clients.
 > to indicate compatibility.
 
 This package is an alias for
-[`fakturownia-mcp`](https://pypi.org/project/fakturownia-mcp/) —
+[`fakturownia-mcp`](https://github.com/secewicz/fakturownia-mcp) —
 InvoiceOcean is the international brand of Fakturownia and both run the same
 API. It ships the same server under an `invoiceocean-mcp` command:
 
@@ -19,7 +19,7 @@ API. It ships the same server under an `invoiceocean-mcp` command:
 claude mcp add invoiceocean \
   -e INVOICEOCEAN_DOMAIN=mycompany.invoiceocean.com \
   -e INVOICEOCEAN_API_TOKEN=... \
-  -- uvx invoiceocean-mcp
+  -- uvx --from https://github.com/secewicz/fakturownia-mcp/releases/download/v0.4.0/invoiceocean_mcp-0.4.0-py3-none-any.whl invoiceocean-mcp
 ```
 
 All environment variables accept the `INVOICEOCEAN_` prefix
@@ -28,7 +28,7 @@ All environment variables accept the `INVOICEOCEAN_` prefix
 your full account domain — the server works with every regional brand of the
 platform: invoiceocean.com, invoiceocean.de, vosfactures.fr, bitfactura.es
 and fakturownia.pl. Full documentation (tools, approval gate) lives in the
-[fakturownia-mcp repository](https://github.com/KrzysztofMarmol/fakturownia-mcp).
+[fakturownia-mcp repository](https://github.com/secewicz/fakturownia-mcp).
 
 ## License
 

@@ -1,11 +1,11 @@
-# Dependency spec for the .mcpb bundle: the host's uv resolves fakturownia-mcp
-# from PyPI at install time, so the bundle itself stays tiny. The version and
-# the == pin below must match the release tag (publish.yml checks this).
+# Dependency spec for the .mcpb bundle: the host's uv resolves the exact
+# reviewed GitHub release tag, so the bundle stays tiny without depending on
+# an upstream-owned PyPI namespace. The tag must match the bundle version.
 [project]
 name = "fakturownia-mcp-bundle"
 version = "0.4.0"
 description = "Runtime environment for the fakturownia-mcp MCPB bundle"
 requires-python = ">=3.10"
 dependencies = [
-    "fakturownia-mcp==0.4.0",
+    "fakturownia-mcp @ git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0",
 ]

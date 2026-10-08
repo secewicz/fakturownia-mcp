@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.9,<2.0",
-    "fakturownia-client>=0.3.0",
+    "fakturownia-client @ git+https://github.com/secewicz/fakturownia-client.git@v0.3.0",
 ]
 
 [project.urls]
@@ -58,12 +58,6 @@ fakturownia_mcp = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = { attr = "fakturownia_mcp.__version__" }
-
-[tool.uv.sources]
-# Exact reviewed client commit. Package metadata still requires the corresponding
-# released version, while uv-based development and CI can use this commit until
-# fakturownia-client 0.3.0 is published.
-fakturownia-client = { git = "https://github.com/secewicz/fakturownia-client", rev = "f41a0cff8b71a8da33894c94b8c6afe6c628f4e0" }
 
 [tool.ruff]
 line-length = 100

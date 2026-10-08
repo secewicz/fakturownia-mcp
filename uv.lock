@@ -409,7 +409,7 @@ wheels = [
 [[package]]
 name = "fakturownia-client"
 version = "0.3.0"
-source = { git = "https://github.com/secewicz/fakturownia-client?rev=f41a0cff8b71a8da33894c94b8c6afe6c628f4e0#f41a0cff8b71a8da33894c94b8c6afe6c628f4e0" }
+source = { git = "https://github.com/secewicz/fakturownia-client.git?rev=v0.3.0#eff524c061429a33d54b7519471ad135bfcb297c" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
@@ -434,7 +434,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fakturownia-client", git = "https://github.com/secewicz/fakturownia-client?rev=f41a0cff8b71a8da33894c94b8c6afe6c628f4e0" },
+    { name = "fakturownia-client", git = "https://github.com/secewicz/fakturownia-client.git?rev=v0.3.0" },
     { name = "mcp", specifier = ">=1.9,<2.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
