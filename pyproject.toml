@@ -1,7 +1,7 @@
 [project]
 name = "fakturownia-mcp"
 dynamic = ["version"]
-description = "Unofficial MCP server exposing Fakturownia (InvoiceOcean) invoices, clients and products as tools"
+description = "Unofficial MCP server exposing Fakturownia (InvoiceOcean) invoicing and account data as tools"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [

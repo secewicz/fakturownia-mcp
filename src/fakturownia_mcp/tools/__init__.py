@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from . import clients, invoices, payments, products
+from . import clients, invoices, payments, products, read_only
 
 
 def register_all(mcp: FastMCP) -> None:
@@ -12,3 +12,4 @@ def register_all(mcp: FastMCP) -> None:
     clients.register(mcp)
     payments.register(mcp)
     products.register(mcp)
+    read_only.register(mcp)

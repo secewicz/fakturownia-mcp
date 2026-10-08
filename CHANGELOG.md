@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
+## [Unreleased]
+
+### Added
+- Nineteen read-only tools for recurring definitions, price lists, warehouses,
+  warehouse documents and actions, categories, departments, issuers, bank
+  accounts, and webhooks. Every list is paginated and returns `page` plus
+  `has_more`; full records redact secret and public-link fields.
+
 ## [0.3.5] - 2026-08-11
 
 ### Fixed

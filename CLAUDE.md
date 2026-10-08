@@ -56,7 +56,7 @@ known future task). `server.py` builds the `FastMCP` instance with agent-facing
 Tool design rules (tests in `test_tool_registration.py` enforce them):
 - tools return `dict[str, Any]` **on purpose** — no typed output models / full
   outputSchema. Full schemas would land in `tools/list` (context cost in every
-  conversation, ×19 tools) while duplicating the "Returns ..." sentences that
+  conversation, ×38 tools) while duplicating the "Returns ..." sentences that
   every docstring must contain (test-enforced). Do not "fix" this.
 - mutually exclusive params (e.g. create_payment invoice_id/invoice_ids) are
   flat optional properties + rule in descriptions + server-side check that

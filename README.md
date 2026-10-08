@@ -7,8 +7,9 @@
 
 **Unofficial** MCP (Model Context Protocol) server exposing a
 [Fakturownia](https://fakturownia.pl) (InvoiceOcean) account as tools for
-Claude and other MCP clients: invoices (list/search, create, update, status
-changes, PDF download), clients and products.
+Claude and other MCP clients: invoices, clients, products, payments, recurring
+definitions, price lists, warehouse records and stock movements, categories,
+departments, issuers, bank accounts, and webhooks.
 
 > This is a community-maintained project. It is not affiliated with, endorsed
 > by, or sponsored by Fakturownia sp. z o.o. or InvoiceOcean. "Fakturownia"
@@ -145,6 +146,16 @@ npx @modelcontextprotocol/inspector \
 | `list_clients` / `get_client` | Search contractors by name, tax id (NIP), e-mail |
 | `create_client` 🔒 / `update_client` 🔒 / `delete_client` 🔒 | Contractor management |
 | `list_products` / `get_product` / `create_product` 🔒 / `update_product` 🔒 | Product management |
+| `list_recurrings` / `get_recurring` | Recurring invoice definitions |
+| `list_price_lists` / `get_price_list` | Configured price lists |
+| `list_warehouses` / `get_warehouse` | Warehouse records |
+| `list_warehouse_documents` / `get_warehouse_document` | Warehouse document headers and details |
+| `list_warehouse_actions` | Filter stock movements by warehouse, kind, product, date, or warehouse document |
+| `list_categories` / `get_category` | Account categories |
+| `list_departments` / `get_department` | Account departments |
+| `list_issuers` / `get_issuer` | Invoice issuers |
+| `list_bank_accounts` / `get_bank_account` | Configured bank accounts |
+| `list_webhooks` / `get_webhook` | Redacted webhook registrations |
 
 Parameters are fully typed (Pydantic) — date patterns, pagination limits and
 status enums are enforced in the tool JSON Schema before any API call.

@@ -1,8 +1,9 @@
 # invoiceocean-mcp
 
 **Unofficial** MCP (Model Context Protocol) server for
-[InvoiceOcean](https://invoiceocean.com) invoicing: invoices, clients and
-products as tools for Claude and other MCP clients.
+[InvoiceOcean](https://invoiceocean.com) invoicing and account data, including
+invoices, clients, products, warehouses, bank accounts, and webhooks, as tools
+for Claude and other MCP clients.
 
 > This is a community-maintained project. It is not affiliated with, endorsed
 > by, or sponsored by InvoiceOcean or Fakturownia sp. z o.o. "InvoiceOcean"
