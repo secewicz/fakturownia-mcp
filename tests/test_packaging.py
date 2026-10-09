@@ -30,7 +30,7 @@ def test_invoiceocean_docs_install_the_alias_release_wheel() -> None:
 
     assert (
         "https://github.com/secewicz/fakturownia-mcp/releases/download/"
-        "v0.4.0/invoiceocean_mcp-0.4.0-py3-none-any.whl"
+        "v0.4.1/invoiceocean_mcp-0.4.1-py3-none-any.whl"
     ) in readme
 
 

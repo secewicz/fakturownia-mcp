@@ -11,6 +11,35 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 InvoiceStatus = Literal["issued", "sent", "paid", "partial", "rejected"]
+CostApprovalStatus = Literal["received", "accepted", "rejected"]
+InvoiceOrder = Literal[
+    "number",
+    "number.desc",
+    "updated_at",
+    "updated_at.desc",
+    "price_net",
+    "price_net.desc",
+    "price_gross",
+    "price_gross.desc",
+    "price_tax",
+    "price_tax.desc",
+    "issue_date",
+    "issue_date.desc",
+    "payment_to",
+    "payment_to.desc",
+    "paid_date",
+    "paid_date.desc",
+    "transaction_date",
+    "transaction_date.desc",
+    "buyer_name",
+    "buyer_name.desc",
+    "buyer_tax_no",
+    "buyer_tax_no.desc",
+    "seller_name",
+    "seller_name.desc",
+    "oid",
+    "oid.desc",
+]
 
 DateStr = Annotated[
     str,
@@ -80,8 +109,10 @@ InvoiceUpdateFields = Annotated[
         description=(
             "Only the fields to change, using Fakturownia API names. Common ones: "
             "buyer_name, buyer_tax_no, buyer_email, issue_date, sell_date, payment_to, "
-            "description, payment_type, approval_status. Do NOT change 'status' here — "
-            "use change_invoice_status. Updating 'positions' has special semantics "
+            "description, payment_type. Do NOT change 'status' here — use "
+            "change_invoice_status. Cost approval_status is also blocked here — use "
+            "change_cost_invoice_approval_status, which verifies the document is a cost. "
+            "Updating 'positions' has special semantics "
             "(existing lines need their 'id'; removal needs {'id': ..., '_destroy': 1})."
         ),
     ),

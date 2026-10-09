@@ -13,6 +13,7 @@ EXPECTED_TOOLS = {
     "create_invoice",
     "update_invoice",
     "change_invoice_status",
+    "change_cost_invoice_approval_status",
     "download_invoice_pdf",
     "list_clients",
     "get_client",

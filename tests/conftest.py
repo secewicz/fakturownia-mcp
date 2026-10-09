@@ -17,8 +17,33 @@ INVOICE = {
     "price_net": "100.0",
     "price_gross": "123.0",
     "currency": "PLN",
+    "income": False,
+    "approval_status": "received",
+    "positions": [
+        {
+            "id": 11,
+            "name": "Consulting",
+            "quantity": "2.0",
+            "tax": "23",
+            "price_net": "50.0",
+            "total_price_net": "100.0",
+            "total_price_gross": "123.0",
+        }
+    ],
     "token": "secret-share-token",
     "view_url": "https://x.fakturownia.net/f/abc",
+}
+SALES_INVOICE = {**INVOICE, "id": 2, "number": "2026/07/02", "income": True}
+UNKNOWN_INCOME_INVOICE = {
+    key: value
+    for key, value in {**INVOICE, "id": 3, "number": "2026/07/03"}.items()
+    if key != "income"
+}
+UNRECOGNIZED_INCOME_INVOICE = {
+    **INVOICE,
+    "id": 4,
+    "number": "2026/07/04",
+    "income": "unknown",
 }
 CLIENT = {
     "id": 5,
@@ -71,6 +96,9 @@ def _handler(request: httpx.Request) -> httpx.Response:
     RECORDED.append(request)
     path = request.url.path
     method = request.method
+    if (method, path) == ("PUT", "/invoices/1.json"):
+        fields = json.loads(request.content)["invoice"]
+        return httpx.Response(200, json={**INVOICE, **fields})
     if method == "GET":
         for resource, record in READ_ONLY_RESOURCES.items():
             if path == f"/{resource}.json":
@@ -82,8 +110,10 @@ def _handler(request: httpx.Request) -> httpx.Response:
     routes = {
         ("GET", "/invoices.json"): [INVOICE],
         ("GET", "/invoices/1.json"): INVOICE,
+        ("GET", "/invoices/2.json"): SALES_INVOICE,
+        ("GET", "/invoices/3.json"): UNKNOWN_INCOME_INVOICE,
+        ("GET", "/invoices/4.json"): UNRECOGNIZED_INCOME_INVOICE,
         ("POST", "/invoices.json"): {**INVOICE, "id": 2},
-        ("PUT", "/invoices/1.json"): INVOICE,
         ("POST", "/invoices/1/change_status.json"): {"code": "success"},
         ("GET", "/clients.json"): [CLIENT],
         ("GET", "/clients/5.json"): CLIENT,

@@ -27,6 +27,7 @@ async def test_list_invoices_returns_summaries_with_paging() -> None:
     (summary,) = result["invoices"]
     assert summary["number"] == "2026/07/01"
     assert summary["buyer_name"] == "ACME Sp. z o.o."
+    assert summary["approval_status"] == "received"
     assert "positions" not in summary  # summaries stay small
     assert "token" not in summary
 
@@ -35,6 +36,39 @@ async def test_list_invoices_income_false_passes_income_no() -> None:
     await tool_fn("list_invoices")(income=False)
 
     assert last_request_params("/invoices.json")["income"] == "no"
+
+
+@pytest.mark.parametrize("order", ["issue_date", "issue_date.desc"])
+async def test_list_invoices_can_include_positions_across_all_costs(order: str) -> None:
+    result = await tool_fn("list_invoices")(
+        period="all", income=False, include_positions=True, order=order
+    )
+
+    params = last_request_params("/invoices.json")
+    assert params["period"] == "all"
+    assert params["income"] == "no"
+    assert params["include_positions"] == "true"
+    assert params["order"] == order
+    (summary,) = result["invoices"]
+    assert summary["approval_status"] == "received"
+    assert summary["positions"] == [
+        {
+            "id": 11,
+            "name": "Consulting",
+            "quantity": "2.0",
+            "tax": "23",
+            "price_net": "50.0",
+            "total_price_net": "100.0",
+            "total_price_gross": "123.0",
+        }
+    ]
+
+
+async def test_list_invoices_rejects_unknown_order_value() -> None:
+    result = await call_tool("list_invoices", {"order": "issue_date_desc"})
+
+    assert result.isError
+    assert not RECORDED
 
 
 async def test_has_more_true_on_full_page() -> None:
@@ -390,6 +424,71 @@ async def test_create_invoice_declined_is_an_error() -> None:
     assert "did not approve" in result_text(result)
 
 
+@pytest.mark.parametrize("approval_status", ["received", "accepted", "rejected"])
+async def test_change_cost_invoice_approval_status_updates_cost_invoice(
+    approval_status: str,
+) -> None:
+    result = await call_tool(
+        "change_cost_invoice_approval_status",
+        {"invoice_id": 1, "approval_status": approval_status},
+        elicitation_callback=APPROVE,
+    )
+
+    assert not result.isError
+    assert result.structuredContent["approval_status"] == approval_status
+    request = next(r for r in RECORDED if r.method == "PUT" and r.url.path == "/invoices/1.json")
+    assert json.loads(request.content) == {"invoice": {"approval_status": approval_status}}
+
+
+@pytest.mark.parametrize("invoice_id", [2, 3, 4])
+async def test_change_cost_invoice_approval_status_fails_closed_without_cost_marker(
+    invoice_id: int,
+) -> None:
+    result = await call_tool(
+        "change_cost_invoice_approval_status",
+        {"invoice_id": invoice_id, "approval_status": "rejected"},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "cost invoice" in result_text(result)
+    assert not any(r.method == "PUT" for r in RECORDED)
+
+
+async def test_update_invoice_cannot_bypass_cost_approval_guard() -> None:
+    result = await call_tool(
+        "update_invoice",
+        {"invoice_id": 2, "fields": {"approval_status": "accepted"}},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert "change_cost_invoice_approval_status" in result_text(result)
+    assert not RECORDED
+
+
+async def test_change_cost_invoice_approval_status_declined_sends_no_update() -> None:
+    result = await call_tool(
+        "change_cost_invoice_approval_status",
+        {"invoice_id": 1, "approval_status": "rejected"},
+        elicitation_callback=elicitation_cb(action="decline"),
+    )
+
+    assert result.isError
+    assert not any(r.method == "PUT" for r in RECORDED)
+
+
+async def test_change_cost_invoice_approval_status_rejects_unknown_value() -> None:
+    result = await call_tool(
+        "change_cost_invoice_approval_status",
+        {"invoice_id": 1, "approval_status": "paid"},
+        elicitation_callback=APPROVE,
+    )
+
+    assert result.isError
+    assert not RECORDED
+
+
 async def test_confirm_false_also_denies() -> None:
     result = await call_tool(
         "change_invoice_status",
@@ -490,6 +589,10 @@ async def test_write_roundtrip_all_tools_approved() -> None:
     cases = [
         ("update_invoice", {"invoice_id": 1, "fields": {"buyer_email": "n@acme.pl"}}),
         ("change_invoice_status", {"invoice_id": 1, "status": "paid"}),
+        (
+            "change_cost_invoice_approval_status",
+            {"invoice_id": 1, "approval_status": "accepted"},
+        ),
         ("create_client", {"name": "ACME Sp. z o.o."}),
         ("update_client", {"client_id": 5, "fields": {"email": "n@acme.pl"}}),
         ("delete_client", {"client_id": 5}),
