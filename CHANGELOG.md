@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versioning: SemVer.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-09
+
+### Added
+- Optional invoice positions in paginated invoice listings, including full-history
+  cost and income queries through `period="all"` and the existing `income` filter.
+- A dedicated, approval-gated cost invoice workflow tool for `received`
+  (otrzymana), `accepted` (zatwierdzona), and `rejected` (odrzucona).
+
+### Changed
+- Invoice summaries now expose `approval_status`. Cost workflow updates first
+  read the target and refuse sales/income invoices.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added

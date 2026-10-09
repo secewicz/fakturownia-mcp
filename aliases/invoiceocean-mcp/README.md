@@ -19,7 +19,7 @@ API. It ships the same server under an `invoiceocean-mcp` command:
 claude mcp add invoiceocean \
   -e INVOICEOCEAN_DOMAIN=mycompany.invoiceocean.com \
   -e INVOICEOCEAN_API_TOKEN=... \
-  -- uvx --from https://github.com/secewicz/fakturownia-mcp/releases/download/v0.4.0/invoiceocean_mcp-0.4.0-py3-none-any.whl invoiceocean-mcp
+  -- uvx --from https://github.com/secewicz/fakturownia-mcp/releases/download/v0.4.1/invoiceocean_mcp-0.4.1-py3-none-any.whl invoiceocean-mcp
 ```
 
 All environment variables accept the `INVOICEOCEAN_` prefix

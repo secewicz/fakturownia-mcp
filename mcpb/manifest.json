@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "fakturownia-mcp",
   "display_name": "Fakturownia (unofficial)",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Unofficial MCP server for Fakturownia / InvoiceOcean invoicing and account data.",
   "author": {
     "name": "Krzysztof Marmol",
@@ -50,6 +50,7 @@
     { "name": "create_invoice", "description": "Issue an invoice (approval required)" },
     { "name": "update_invoice", "description": "Partial invoice update (approval required)" },
     { "name": "change_invoice_status", "description": "Set issued/sent/paid/partial/rejected (approval required)" },
+    { "name": "change_cost_invoice_approval_status", "description": "Set a cost invoice to received/accepted/rejected (approval required)" },
     { "name": "send_invoice_by_email", "description": "E-mail the invoice PDF to the buyer or given recipients (approval required)" },
     { "name": "download_invoice_pdf", "description": "Save the invoice PDF into the configured download directory" },
     { "name": "list_payments", "description": "Banking payments, optionally with the invoices they settle" },

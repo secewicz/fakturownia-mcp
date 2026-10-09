@@ -16,9 +16,11 @@ from fakturownia_mcp.approval import format_fields, require_approval
 from fakturownia_mcp.errors import api_call
 from fakturownia_mcp.schemas import (
     ConfirmFlag,
+    CostApprovalStatus,
     DateStr,
     EmailList,
     InvoiceNumber,
+    InvoiceOrder,
     InvoiceStatus,
     InvoiceUpdateFields,
     KindStr,
@@ -33,8 +35,8 @@ from fakturownia_mcp.schemas import (
 _READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 
 
-def _summary(invoice: Invoice) -> dict[str, Any]:
-    return {
+def _summary(invoice: Invoice, *, include_positions: bool = False) -> dict[str, Any]:
+    summary = {
         "id": invoice.id,
         "number": invoice.number,
         "kind": invoice.kind,
@@ -45,7 +47,19 @@ def _summary(invoice: Invoice) -> dict[str, Any]:
         "price_net": invoice.price_net,
         "price_gross": invoice.price_gross,
         "currency": invoice.currency,
+        "approval_status": getattr(invoice, "approval_status", None),
     }
+    if include_positions:
+        summary["positions"] = [
+            position.model_dump(mode="json", exclude_none=True)
+            for position in (invoice.positions or [])
+        ]
+    return summary
+
+
+def _is_cost_invoice(invoice: Invoice) -> bool:
+    income = getattr(invoice, "income", None)
+    return income is False or income in (0, "0", "false", "no")
 
 
 def register(mcp: FastMCP) -> None:
@@ -68,6 +82,24 @@ def register(mcp: FastMCP) -> None:
                 )
             ),
         ] = None,
+        include_positions: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Include every invoice line item in each summary. Useful for exports and "
+                    "cost analysis; leave false when compact totals are enough."
+                )
+            ),
+        ] = False,
+        order: Annotated[
+            InvoiceOrder | None,
+            Field(
+                description=(
+                    "API sort order: a field such as issue_date for ascending, or the same "
+                    "field with .desc such as issue_date.desc for descending"
+                )
+            ),
+        ] = None,
         page: Page = 1,
         per_page: PerPage = 25,
     ) -> dict[str, Any]:
@@ -79,10 +111,14 @@ def register(mcp: FastMCP) -> None:
         searching by number or client_id across history, also pass period='all' —
         without a date filter the API may limit results to a recent period.
 
+        Use period='all' and follow pages until has_more is false to read the
+        complete history. Set include_positions=true to extract all line items
+        directly from every returned invoice without invoking any KSeF service.
+
         Returns {"invoices": [summaries], "page", "has_more"}; each summary has id,
-        number, kind, status, issue_date, payment_to, buyer_name, price_net,
-        price_gross, currency. Summaries omit line items — call
-        get_invoice(invoice_id) for the full record. has_more is optimistic: a
+        number, kind, status, approval_status, issue_date, payment_to, buyer_name,
+        price_net, price_gross and currency. Positions are included only when
+        requested. has_more is optimistic: a
         result set exactly equal to per_page reports True even on the last page.
         Example: list_invoices(period="last_month", income=False, per_page=50).
         """
@@ -96,12 +132,14 @@ def register(mcp: FastMCP) -> None:
                 number=number,
                 kind=kind,
                 income=income,
+                include_positions=include_positions,
+                order=order,
                 page=page,
                 per_page=per_page,
             )
         )
         return {
-            "invoices": [_summary(inv) for inv in invoices],
+            "invoices": [_summary(inv, include_positions=include_positions) for inv in invoices],
             "page": page,
             "has_more": len(invoices) == per_page,
         }
@@ -265,6 +303,12 @@ def register(mcp: FastMCP) -> None:
         Returns a summary (id, number, status, amounts) of the updated invoice.
         Example: update_invoice(invoice_id=123, fields={"buyer_email": "x@y.pl"}).
         """
+        if "approval_status" in fields:
+            raise ToolError(
+                "approval_status cannot be changed through update_invoice. Use "
+                "change_cost_invoice_approval_status, which first verifies that the target "
+                "is a cost invoice."
+            )
         await require_approval(
             ctx, f"update invoice {invoice_id}: {format_fields(fields)}", confirm=confirm
         )
@@ -304,6 +348,57 @@ def register(mcp: FastMCP) -> None:
         client = await config.get_client()
         await api_call(client.change_invoice_status(invoice_id, status))
         return {"invoice_id": invoice_id, "status": status}
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Change cost invoice approval status",
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+            openWorldHint=False,
+        )
+    )
+    async def change_cost_invoice_approval_status(
+        invoice_id: int,
+        approval_status: Annotated[
+            CostApprovalStatus,
+            Field(
+                description=(
+                    "Cost workflow state: received (otrzymana), accepted (zatwierdzona), "
+                    "or rejected (odrzucona)"
+                )
+            ),
+        ],
+        confirm: ConfirmFlag = False,
+        *,
+        ctx: Context,  # type: ignore[type-arg]
+    ) -> dict[str, Any]:
+        """Set the approval workflow state of a cost/expense invoice.
+
+        The tool first reads the invoice and refuses sales/income documents, so
+        this workflow cannot be applied to an issued sales invoice accidentally.
+        It maps received to "otrzymana", accepted to "zatwierdzona", and rejected
+        to "odrzucona" in the Polish UI. The user approves the exact transition
+        before the API update is sent.
+
+        Returns the updated invoice summary, including approval_status.
+        """
+        client = await config.get_client()
+        invoice = await api_call(client.get_invoice(invoice_id))
+        if not _is_cost_invoice(invoice):
+            raise ToolError(
+                f"Invoice {invoice_id} is not confirmed as a cost invoice. "
+                "Use list_invoices(income=False, period='all') to select a cost invoice id."
+            )
+        await require_approval(
+            ctx,
+            f"change cost invoice {invoice_id} approval_status to '{approval_status}'",
+            confirm=confirm,
+        )
+        updated = await api_call(
+            client.update_invoice(invoice_id, {"approval_status": approval_status})
+        )
+        return _summary(updated)
 
     @mcp.tool(
         annotations=ToolAnnotations(

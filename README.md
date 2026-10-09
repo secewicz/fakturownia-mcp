@@ -68,7 +68,7 @@ server the bundle ships:
 claude mcp add fakturownia \
   -e FAKTUROWNIA_DOMAIN=mycompany \
   -e FAKTUROWNIA_API_TOKEN=... \
-  -- uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
+  -- uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1 fakturownia-mcp
 ```
 
 Scope tip: add `--scope user` to make the server available in every project;
@@ -99,7 +99,7 @@ the exact reviewed GitHub release tag declared in its dependency metadata.
   "mcpServers": {
     "fakturownia": {
       "command": "/Users/you/.local/bin/uvx",
-      "args": ["--from", "git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0", "fakturownia-mcp"],
+      "args": ["--from", "git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1", "fakturownia-mcp"],
       "env": {
         "FAKTUROWNIA_DOMAIN": "mycompany",
         "FAKTUROWNIA_API_TOKEN": "..."
@@ -114,8 +114,8 @@ the exact reviewed GitHub release tag declared in its dependency metadata.
 The server speaks MCP over **stdio**. Any of these commands starts it:
 
 ```bash
-uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
-uv tool install git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0
+uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1 fakturownia-mcp
+uv tool install git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1
 python -m fakturownia_mcp            # after uv tool install
 ```
 
@@ -124,18 +124,19 @@ python -m fakturownia_mcp            # after uv tool install
 ```bash
 npx @modelcontextprotocol/inspector \
   -e FAKTUROWNIA_DOMAIN=... -e FAKTUROWNIA_API_TOKEN=... \
-  uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0 fakturownia-mcp
+  uvx --from git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1 fakturownia-mcp
 ```
 
 ## Tools
 
 | Tool | Description |
 |---|---|
-| `list_invoices` | Search by period, date range, client, number, kind; `income=false` lists **cost/expense** invoices; paginated summaries + `has_more` |
+| `list_invoices` | Search sales or **cost/expense** invoices; use `period="all"` and paginate for full history, and `include_positions=true` to return every line item |
 | `get_invoice` | Full invoice with positions |
 | `create_invoice` 🔒 | Issue an invoice: buyer by `client_id` or `buyer_*` fields, typed positions, any document kind (`vat`, `proforma`, …) |
-| `update_invoice` 🔒 | Partial update, e.g. `{"buyer_email": "x@y.pl"}` or `{"approval_status": "verified"}` |
+| `update_invoice` 🔒 | Partial update, e.g. `{"buyer_email": "x@y.pl"}`; prefer the dedicated approval-status tool for cost workflow changes |
 | `change_invoice_status` 🔒 | `issued` / `sent` / `paid` / `partial` / `rejected` |
+| `change_cost_invoice_approval_status` 🔒 | Cost invoices only: `received` (otrzymana), `accepted` (zatwierdzona), or `rejected` (odrzucona) |
 | `download_invoice_pdf` | Saves the PDF to disk (default `~/Downloads/faktura-<number>.pdf`) |
 | `send_invoice_by_email` 🔒 | E-mails the invoice PDF to the buyer or given recipients (max 5, plus CC); sends immediately |
 | `list_payments` | Banking payments with amounts; `include_invoices=true` embeds the settled invoices |
@@ -162,6 +163,8 @@ Example prompts once connected:
 
 - *"List my unpaid invoices from this month"*
 - *"Show my expenses from June"* → `list_invoices(income=false, ...)`
+- *"Show all cost positions"* → `list_invoices(period="all", income=false, include_positions=true)` and paginate
+- *"Mark cost invoice 123 as approved"* → guarded `change_cost_invoice_approval_status(..., approval_status="accepted")`
 - *"Issue a VAT invoice for ACME for 'Consulting', 1000 zł net"* → approval dialog → created
 - *"A 500 zł transfer arrived for invoice 12/2026"* → `create_payment` (records money, settles the invoice)
 - *"E-mail invoice 12/2026 to the client"* → approval dialog with recipients → sent

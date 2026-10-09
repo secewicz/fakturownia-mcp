@@ -3,9 +3,9 @@
 # an upstream-owned PyPI namespace. The tag must match the bundle version.
 [project]
 name = "fakturownia-mcp-bundle"
-version = "0.4.0"
+version = "0.4.1"
 description = "Runtime environment for the fakturownia-mcp MCPB bundle"
 requires-python = ">=3.10"
 dependencies = [
-    "fakturownia-mcp @ git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.0",
+    "fakturownia-mcp @ git+https://github.com/secewicz/fakturownia-mcp.git@v0.4.1",
 ]
